@@ -55,6 +55,15 @@ Basit, kullanıcı dostu bir To-Do (görev listesi) uygulaması.
 
 Bu özellikler tarayıcıdaki `localStorage` içinde saklanır.
 
+### Eklenen İleri Özellikler
+
+- Etiketler: Görevlere etiket ekleyebilir ve etiketlere göre filtreleyebilirsiniz. Etiketleri eklerken virgülle ayırın.
+- Filtre Kaydetme: Sık kullandığınız filtre kombinasyonlarını isim verip kaydedebilir, sonra tek tıkla uygulayabilirsiniz.
+- Paylaşım: Mevcut görev listesi ve filtre ayarlarını paylaşmak için bir paylaşım linki oluşturabilir ve kopyalayabilirsiniz. Paylaşılan linki açıp onaylarsanız görevler içe aktarılır.
+
+## Sürüm Notu
+- Bu proje küçük, tek dosya bir uygulamadır ve geliştirmeye açıktır. Daha gelişmiş senkronizasyon için sunucu tarafı veya kullanıcı hesabı tabanlı depolama eklenebilir.
+
 ## Notlar
 - Filtreler üst kısımdaki düğmelerle değiştirilebilir.
 - `localStorage` verisini temizlemek isterseniz tarayıcı geliştirici araçlarından silinebilir.

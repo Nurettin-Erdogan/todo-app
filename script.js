@@ -1,4 +1,5 @@
 const taskDate = document.getElementById("taskDate");
+const taskTags = document.getElementById("taskTags");
 const taskPriority = document.getElementById("taskPriority");
 const addBtn = document.getElementById("addBtn");
 const taskList = document.getElementById("taskList");
@@ -7,6 +8,11 @@ const clearCompletedBtn = document.getElementById("clearCompletedBtn");
 const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
+const tagFiltersDiv = document.getElementById("tagFilters");
+const saveFilterBtn = document.getElementById("saveFilterBtn");
+const savedFilterName = document.getElementById("savedFilterName");
+const savedFiltersList = document.getElementById("savedFiltersList");
+const shareBtn = document.getElementById("shareBtn");
 const snackbar = document.getElementById("snackbar");
 const exportBtn = document.getElementById("exportBtn");
 const importBtn = document.getElementById("importBtn");
@@ -21,10 +27,13 @@ function normalizeTask(t) {
     completed: !!t.completed,
     date: t.date ?? "",
     priority: t.priority ?? "medium",
+    tags: Array.isArray(t.tags) ? t.tags : (t.tags ? String(t.tags).split(/,\s*/).map(s=>s.trim()).filter(Boolean) : []),
   };
 }
 tasks = tasks.map(normalizeTask);
 let currentFilter = "all";
+let activeTagFilters = [];
+let savedFilters = JSON.parse(localStorage.getItem("savedFilters")) || [];
 let lastDeleted = null; // { task, index } or { tasks: [...] }
 let undoTimeoutId = null;
 let draggingId = null;
@@ -41,24 +50,28 @@ filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
 exportBtn?.addEventListener("click", exportTasks);
 importBtn?.addEventListener("click", () => importFile && importFile.click());
 importFile?.addEventListener("change", handleImportFile);
+saveFilterBtn?.addEventListener("click", saveCurrentFilter);
+shareBtn?.addEventListener("click", shareCurrentView);
 
 function handleAddTask() {
   const taskText = taskInput.value.trim();
   const date = taskDate?.value || "";
   const priority = taskPriority?.value || "medium";
+  const tags = taskTags?.value ? taskTags.value.split(/,\s*/).map(s=>s.trim()).filter(Boolean) : [];
 
   if (taskText === "") {
     alert("Lütfen bir görev giriniz.");
     return;
   }
 
-  const task = { id: Date.now(), text: taskText, completed: false, date, priority };
+  const task = { id: Date.now(), text: taskText, completed: false, date, priority, tags };
   tasks.push(task);
   saveAndRender();
 
   taskInput.value = "";
   if (taskDate) taskDate.value = "";
   if (taskPriority) taskPriority.value = "medium";
+  if (taskTags) taskTags.value = "";
   taskInput.focus();
 }
 
@@ -111,8 +124,11 @@ function renderTasks() {
   taskList.innerHTML = "";
 
   const visible = tasks.filter((t) => {
-    if (currentFilter === "active") return !t.completed;
-    if (currentFilter === "completed") return t.completed;
+    if (currentFilter === "active" && t.completed) return false;
+    if (currentFilter === "completed" && !t.completed) return false;
+    if (activeTagFilters.length > 0) {
+      if (!Array.isArray(t.tags) || !t.tags.some(tag => activeTagFilters.includes(tag))) return false;
+    }
     return true;
   });
 
@@ -135,26 +151,43 @@ function renderTasks() {
     span.addEventListener("click", () => toggleTask(task.id));
     span.addEventListener("dblclick", () => startEditing(span, task));
 
-    const meta = document.createElement("div");
-    meta.className = "task-meta";
+      const meta = document.createElement("div");
+      meta.className = "task-meta";
 
-    if (task.date) {
-      const due = document.createElement("span");
-      due.className = "due";
-      due.textContent = formatDate(task.date);
-      if (isPastDate(task.date) && !task.completed) due.classList.add("due-past");
-      meta.appendChild(due);
-    }
+      if (task.date) {
+        const due = document.createElement("span");
+        due.className = "due";
+        due.textContent = formatDate(task.date);
+        if (isPastDate(task.date) && !task.completed) due.classList.add("due-past");
+        meta.appendChild(due);
+      }
 
-    const badge = document.createElement("span");
-    badge.className = `badge priority-${task.priority}`;
-    badge.textContent = task.priority === "high" ? "Yüksek" : task.priority === "medium" ? "Orta" : "Düşük";
-    meta.appendChild(badge);
+      const badge = document.createElement("span");
+      badge.className = `badge priority-${task.priority}`;
+      badge.textContent = task.priority === "high" ? "Yüksek" : task.priority === "medium" ? "Orta" : "Düşük";
+      meta.appendChild(badge);
 
-    const textWrap = document.createElement("div");
-    textWrap.className = "task-main";
-    textWrap.appendChild(span);
-    textWrap.appendChild(meta);
+      // tags
+      if (Array.isArray(task.tags) && task.tags.length) {
+        const tagsWrap = document.createElement("div");
+        tagsWrap.className = "tags-wrap";
+        task.tags.forEach((tg) => {
+          const tspan = document.createElement("span");
+          tspan.className = "tag-badge";
+          tspan.textContent = tg;
+          tspan.addEventListener("click", (e) => {
+            e.stopPropagation();
+            toggleTagFilter(tg);
+          });
+          tagsWrap.appendChild(tspan);
+        });
+        meta.appendChild(tagsWrap);
+      }
+
+      const textWrap = document.createElement("div");
+      textWrap.className = "task-main";
+      textWrap.appendChild(span);
+      textWrap.appendChild(meta);
 
     const buttonContainer = document.createElement("div");
     buttonContainer.classList.add("task-buttons");
@@ -165,7 +198,7 @@ function renderTasks() {
 
     const editBtn = document.createElement("button");
     editBtn.textContent = "Düzenle";
-    editBtn.addEventListener("click", () => startEditing(span, task));
+    editBtn.addEventListener("click", () => editTaskDetails(task));
 
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Sil";
@@ -217,6 +250,19 @@ function renderTasks() {
   updateRemainingCount();
 }
 
+function editTaskDetails(task) {
+  const newText = prompt("Görev metni:", task.text);
+  if (newText === null) return;
+  const newTags = prompt("Etiketler (virgülle ayır):", (task.tags || []).join(", "));
+  if (newTags === null) return;
+  const newDate = prompt("Son tarih (YYYY-MM-DD):", task.date || "");
+  task.text = newText.trim();
+  task.tags = newTags.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+  task.date = newDate ? String(newDate).trim() : "";
+  tasks = tasks.map((t)=> t.id===task.id ? normalizeTask(task) : t);
+  saveAndRender();
+}
+
 function startEditing(span, task) {
   const li = span.closest("li");
   const input = document.createElement("input");
@@ -261,6 +307,66 @@ function updateFilterUI() {
   if (currentFilter === "all") document.getElementById("filterAll").classList.add("active");
   if (currentFilter === "active") document.getElementById("filterActive").classList.add("active");
   if (currentFilter === "completed") document.getElementById("filterCompleted").classList.add("active");
+}
+
+function renderTagFilters() {
+  if (!tagFiltersDiv) return;
+  const allTags = Array.from(new Set(tasks.flatMap(t => t.tags || [])));
+  tagFiltersDiv.innerHTML = "";
+  allTags.forEach(tg => {
+    const b = document.createElement('button');
+    b.className = 'tag-filter-btn' + (activeTagFilters.includes(tg) ? ' active' : '');
+    b.textContent = tg;
+    b.addEventListener('click', () => toggleTagFilter(tg));
+    tagFiltersDiv.appendChild(b);
+  });
+  if (allTags.length === 0) tagFiltersDiv.textContent = '';
+}
+
+function toggleTagFilter(tag) {
+  const idx = activeTagFilters.indexOf(tag);
+  if (idx === -1) activeTagFilters.push(tag); else activeTagFilters.splice(idx,1);
+  renderTagFilters();
+  renderTasks();
+}
+
+function saveCurrentFilter() {
+  const name = (savedFilterName?.value || '').trim();
+  if (!name) { alert('Önce bir isim girin.'); return; }
+  const f = { id: Date.now(), name, filter: { type: currentFilter, tags: activeTagFilters.slice() } };
+  savedFilters.push(f);
+  localStorage.setItem('savedFilters', JSON.stringify(savedFilters));
+  renderSavedFilters();
+}
+
+function renderSavedFilters() {
+  if (!savedFiltersList) return;
+  savedFiltersList.innerHTML = '';
+  savedFilters.forEach(s => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'saved-filter-item';
+    const btn = document.createElement('button');
+    btn.textContent = s.name;
+    btn.addEventListener('click', () => { applySavedFilter(s); });
+    const del = document.createElement('button');
+    del.textContent = 'x';
+    del.className = 'saved-filter-del';
+    del.addEventListener('click', () => { deleteSavedFilter(s.id); });
+    wrapper.appendChild(btn); wrapper.appendChild(del);
+    savedFiltersList.appendChild(wrapper);
+  });
+}
+
+function applySavedFilter(s) {
+  currentFilter = s.filter.type || 'all';
+  activeTagFilters = Array.isArray(s.filter.tags) ? s.filter.tags.slice() : [];
+  renderTagFilters(); renderTasks();
+}
+
+function deleteSavedFilter(id) {
+  savedFilters = savedFilters.filter(s => s.id !== id);
+  localStorage.setItem('savedFilters', JSON.stringify(savedFilters));
+  renderSavedFilters();
 }
 
 function updateRemainingCount() {
@@ -346,4 +452,43 @@ function handleImportFile(e) {
   reader.readAsText(file);
 }
 
+// Share (URL) helpers
+function base64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+function base64Decode(b) { return decodeURIComponent(escape(atob(b))); }
+
+function shareCurrentView() {
+  try {
+    const shareData = { tasks, filter: { type: currentFilter, tags: activeTagFilters } };
+    const encoded = base64Encode(JSON.stringify(shareData));
+    const url = location.origin + location.pathname + '#share=' + encoded;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(()=> showSnackbar('Paylaşım linki kopyalandı.', false));
+    } else {
+      const a = document.createElement('a'); a.href = url; a.style.display='none'; document.body.appendChild(a); a.select; showSnackbar('Link hazır, kopyalayın.', false);
+    }
+  } catch (err) {
+    alert('Paylaşım oluşturulamadı.');
+  }
+}
+
+function tryLoadFromHash() {
+  try {
+    if (!location.hash) return;
+    const m = location.hash.match(/^#share=(.+)/);
+    if (!m) return;
+    const decoded = base64Decode(m[1]);
+    const parsed = JSON.parse(decoded);
+    if (!confirm('Paylaşılan veri bulundu. Görevleri içe aktarmak istiyor musunuz? Mevcut görevler değişecek.')) return;
+    tasks = Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : tasks;
+    currentFilter = parsed.filter?.type || 'all';
+    activeTagFilters = Array.isArray(parsed.filter?.tags) ? parsed.filter.tags : [];
+    saveAndRender();
+  } catch (err) {
+    console.warn('Hash paylaşımı okunamadı', err);
+  }
+}
+
 renderTasks();
+renderTagFilters();
+renderSavedFilters();
+tryLoadFromHash();
