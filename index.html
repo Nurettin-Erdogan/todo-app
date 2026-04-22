@@ -22,7 +22,16 @@
       <section class="todo-app">
         <div class="input-area">
           <input type="text" id="taskInput" placeholder="Yeni görev yazın ve Enter'a basın..." aria-label="Yeni görev" />
+          <input type="date" id="taskDate" aria-label="Son tarih" />
+          <select id="taskPriority" aria-label="Öncelik">
+            <option value="low">Düşük</option>
+            <option value="medium" selected>Orta</option>
+            <option value="high">Yüksek</option>
+          </select>
           <button id="addBtn" aria-label="Görev ekle">Ekle</button>
+          <button id="exportBtn" aria-label="Dışa Aktar">Dışa Aktar</button>
+          <button id="importBtn" aria-label="İçe Aktar">İçe Aktar</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" />
         </div>
 
         <div class="controls">

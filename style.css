@@ -44,6 +44,8 @@ body{
 
 .input-area{display:flex;gap:12px;margin-top:10px}
 .input-area input{flex:1;padding:12px 14px;border-radius:8px;border:1px solid #e6e9ef}
+.input-area input[type="date"]{max-width:150px}
+.input-area select{padding:10px;border-radius:8px;border:1px solid #e6e9ef;background:#fff}
 .input-area button{background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
 
 .controls{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
@@ -58,6 +60,18 @@ body{
 .task-buttons button{margin-left:6px;padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
 .task-buttons button:first-child{background:var(--success);color:#fff}
 .task-buttons button:last-child{background:var(--danger);color:#fff}
+
+.task-main{display:flex;align-items:center;gap:10px;flex:1}
+.task-meta{display:flex;gap:8px;align-items:center}
+.badge{padding:4px 8px;border-radius:999px;font-size:.75rem;color:#fff}
+.priority-high{background:var(--danger)}
+.priority-medium{background:var(--primary)}
+.priority-low{background:var(--muted)}
+.due{font-size:.82rem;color:var(--muted)}
+.due-past{color:var(--danger);font-weight:600}
+
+.task-item.dragging{opacity:.5}
+.task-item.drag-over{transform:translateY(2px);box-shadow:0 6px 20px rgba(2,6,23,.06)}
 
 .about{padding:12px 8px}
 .about h2{margin:10px 0 6px;font-size:1rem}

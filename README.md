@@ -46,6 +46,15 @@ Basit, kullanıcı dostu bir To-Do (görev listesi) uygulaması.
 3. Bir görevi düzenlemek için `Düzenle` butonuna basın veya görev metnine çift tıklayın.
 4. Görevi silince kısa süre içinde çıkan `Geri Al` butonu ile işlemi geri alabilirsiniz.
 
+### Yeni özellikler
+
+- Göreve son tarih ekleme: Görev eklerken tarih seçebilirsiniz.
+- Göreve öncelik atama: Düşük / Orta / Yüksek seçenekleri mevcuttur.
+- Sürükle-bırak ile görev sıralama: Görevleri istediğiniz sıraya sürükleyin.
+- Dışa aktar / İçe aktar: Görevleri JSON olarak dışa aktarabilir veya içe aktarabilirsiniz.
+
+Bu özellikler tarayıcıdaki `localStorage` içinde saklanır.
+
 ## Notlar
 - Filtreler üst kısımdaki düğmelerle değiştirilebilir.
 - `localStorage` verisini temizlemek isterseniz tarayıcı geliştirici araçlarından silinebilir.

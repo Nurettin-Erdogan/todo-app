@@ -1,5 +1,10 @@
 const taskInput = document.getElementById("taskInput");
 const addBtn = document.getElementById("addBtn");
+
+const taskInput = document.getElementById("taskInput");
+const taskDate = document.getElementById("taskDate");
+const taskPriority = document.getElementById("taskPriority");
+const addBtn = document.getElementById("addBtn");
 const taskList = document.getElementById("taskList");
 const remainingCount = document.getElementById("remainingCount");
 const clearCompletedBtn = document.getElementById("clearCompletedBtn");
@@ -7,23 +12,47 @@ const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
 const snackbar = document.getElementById("snackbar");
+const exportBtn = document.getElementById("exportBtn");
+const importBtn = document.getElementById("importBtn");
+const importFile = document.getElementById("importFile");
 const toggleAboutBtn = document.getElementById("toggleAboutBtn");
 const aboutSection = document.getElementById("about");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+function normalizeTask(t) {
+  return {
+    id: t.id ?? Date.now(),
+    text: t.text ?? "",
+    completed: !!t.completed,
+    date: t.date ?? "",
+    priority: t.priority ?? "medium",
+  };
+}
+tasks = tasks.map(normalizeTask);
 let currentFilter = "all";
 let lastDeleted = null; // { task, index } or { tasks: [...] }
 let undoTimeoutId = null;
+let draggingId = null;
 
-addBtn.addEventListener("click", handleAddTask);
-taskInput.addEventListener("keydown", function (e) {
+addBtn?.addEventListener("click", handleAddTask);
+taskInput?.addEventListener("keydown", function (e) {
   if (e.key === "Enter") handleAddTask();
 });
 
-clearCompletedBtn.addEventListener("click", clearCompletedTasks);
-filterAllBtn.addEventListener("click", () => setFilter("all"));
-filterActiveBtn.addEventListener("click", () => setFilter("active"));
-filterCompletedBtn.addEventListener("click", () => setFilter("completed"));
+clearCompletedBtn?.addEventListener("click", clearCompletedTasks);
+filterAllBtn?.addEventListener("click", () => setFilter("all"));
+filterActiveBtn?.addEventListener("click", () => setFilter("active"));
+filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
+exportBtn?.addEventListener("click", exportTasks);
+importBtn?.addEventListener("click", () => importFile && importFile.click());
+importFile?.addEventListener("change", handleImportFile);
+if (toggleAboutBtn && aboutSection) {
+  toggleAboutBtn.addEventListener("click", () => {
+    const hidden = aboutSection.classList.toggle("hidden");
+    toggleAboutBtn.setAttribute("aria-expanded", String(!hidden));
+    toggleAboutBtn.textContent = hidden ? "Hakkında Göster" : "Hakkında Gizle";
+  });
+}
 
 if (toggleAboutBtn && aboutSection) {
   toggleAboutBtn.addEventListener("click", () => {
@@ -35,17 +64,21 @@ if (toggleAboutBtn && aboutSection) {
 
 function handleAddTask() {
   const taskText = taskInput.value.trim();
+  const date = taskDate?.value || "";
+  const priority = taskPriority?.value || "medium";
 
   if (taskText === "") {
     alert("Lütfen bir görev giriniz.");
     return;
   }
 
-  const task = { id: Date.now(), text: taskText, completed: false };
+  const task = { id: Date.now(), text: taskText, completed: false, date, priority };
   tasks.push(task);
   saveAndRender();
 
   taskInput.value = "";
+  if (taskDate) taskDate.value = "";
+  if (taskPriority) taskPriority.value = "medium";
   taskInput.focus();
 }
 
@@ -114,12 +147,34 @@ function renderTasks() {
     const li = document.createElement("li");
     li.className = "task-item";
     li.dataset.id = task.id;
+    li.draggable = true;
 
     const span = document.createElement("span");
     span.textContent = task.text;
     span.className = task.completed ? "task-text completed" : "task-text";
     span.addEventListener("click", () => toggleTask(task.id));
     span.addEventListener("dblclick", () => startEditing(span, task));
+
+    const meta = document.createElement("div");
+    meta.className = "task-meta";
+
+    if (task.date) {
+      const due = document.createElement("span");
+      due.className = "due";
+      due.textContent = formatDate(task.date);
+      if (isPastDate(task.date) && !task.completed) due.classList.add("due-past");
+      meta.appendChild(due);
+    }
+
+    const badge = document.createElement("span");
+    badge.className = `badge priority-${task.priority}`;
+    badge.textContent = task.priority === "high" ? "Yüksek" : task.priority === "medium" ? "Orta" : "Düşük";
+    meta.appendChild(badge);
+
+    const textWrap = document.createElement("div");
+    textWrap.className = "task-main";
+    textWrap.appendChild(span);
+    textWrap.appendChild(meta);
 
     const buttonContainer = document.createElement("div");
     buttonContainer.classList.add("task-buttons");
@@ -140,8 +195,40 @@ function renderTasks() {
     buttonContainer.appendChild(editBtn);
     buttonContainer.appendChild(deleteBtn);
 
-    li.appendChild(span);
+    li.appendChild(textWrap);
     li.appendChild(buttonContainer);
+
+    // drag events
+    li.addEventListener("dragstart", (e) => {
+      draggingId = task.id;
+      li.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", String(task.id)); } catch (err) {}
+    });
+    li.addEventListener("dragend", () => {
+      draggingId = null;
+      li.classList.remove("dragging");
+      document.querySelectorAll(".task-item").forEach((el) => el.classList.remove("drag-over"));
+    });
+
+    li.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      li.classList.add("drag-over");
+    });
+    li.addEventListener("dragleave", () => li.classList.remove("drag-over"));
+
+    li.addEventListener("drop", (e) => {
+      e.preventDefault();
+      li.classList.remove("drag-over");
+      const draggedId = draggingId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+      if (!draggedId) return;
+      const fromIndex = tasks.findIndex((t) => String(t.id) === String(draggedId));
+      const toIndex = tasks.findIndex((t) => String(t.id) === String(task.id));
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+      const [moved] = tasks.splice(fromIndex, 1);
+      tasks.splice(toIndex, 0, moved);
+      saveAndRender();
+    });
 
     taskList.appendChild(li);
   });
@@ -201,6 +288,21 @@ function updateRemainingCount() {
   remainingCount.textContent = remaining;
 }
 
+function formatDate(d) {
+  if (!d) return "";
+  const dt = new Date(d);
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString("tr-TR");
+}
+
+function isPastDate(d) {
+  if (!d) return false;
+  const dt = new Date(d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return dt < today;
+}
+
 function showSnackbar(message, withUndo = false) {
   if (!snackbar) return;
   snackbar.innerHTML = "";
@@ -225,6 +327,43 @@ function showSnackbar(message, withUndo = false) {
 function hideSnackbar() {
   if (!snackbar) return;
   snackbar.classList.remove("show");
+}
+
+function exportTasks() {
+  const dataStr = JSON.stringify(tasks, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "todo-tasks.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!Array.isArray(parsed)) {
+        alert("Beklenen format: görevlerin bulunduğu bir JSON dizisi.");
+        return;
+      }
+      if (!confirm("İçe aktarım mevcut görevleri değiştirecek. Onaylıyor musunuz?")) return;
+      tasks = parsed.map(normalizeTask);
+      saveAndRender();
+      showSnackbar("Görevler içe aktarıldı.", false);
+    } catch (err) {
+      alert("Dosya okunamadı veya JSON formatı hatalı.");
+    } finally {
+      importFile.value = "";
+    }
+  };
+  reader.readAsText(file);
 }
 
 renderTasks();
