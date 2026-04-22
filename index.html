@@ -9,8 +9,13 @@
 <body>
   <div class="container">
     <header class="header">
-      <h1>To-Do List</h1>
-      <p class="subtitle">Basit ve kullanıcı dostu görev yöneticisi</p>
+      <div class="header-left">
+        <h1>To-Do List</h1>
+        <p class="subtitle">Basit ve kullanıcı dostu görev yöneticisi</p>
+      </div>
+      <div class="header-right">
+        <button id="toggleAboutBtn" aria-expanded="true" aria-controls="about">Hakkında Gizle</button>
+      </div>
     </header>
 
     <main class="app">
@@ -37,7 +42,7 @@
         <ul id="taskList" class="task-list" aria-live="polite"></ul>
       </section>
 
-      <section class="about">
+      <section id="about" class="about">
         <h2>Programın Özellikleri</h2>
         <ul>
           <li>Görev ekleme</li>
@@ -77,8 +82,6 @@
       <small>To-Do List — Açık kaynak, basit ve kullanışlı.</small>
     </footer>
   </div>
-
-</main>
 
     <div id="snackbar" class="snackbar" aria-live="polite"></div>
 

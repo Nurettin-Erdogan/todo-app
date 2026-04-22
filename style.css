@@ -35,6 +35,13 @@ body{
 .header h1{margin:0;font-size:1.6rem}
 .subtitle{margin:6px 0 0;color:var(--muted);font-size:.95rem}
 
+.header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.header-left{display:flex;flex-direction:column}
+.header-right{display:flex;align-items:center}
+#toggleAboutBtn{background:transparent;border:1px solid #e6e9ef;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--muted)}
+#toggleAboutBtn:focus{outline:2px solid var(--primary);outline-offset:2px}
+.about.hidden{display:none}
+
 .input-area{display:flex;gap:12px;margin-top:10px}
 .input-area input{flex:1;padding:12px 14px;border-radius:8px;border:1px solid #e6e9ef}
 .input-area button{background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}

@@ -7,6 +7,8 @@ const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
 const snackbar = document.getElementById("snackbar");
+const toggleAboutBtn = document.getElementById("toggleAboutBtn");
+const aboutSection = document.getElementById("about");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 let currentFilter = "all";
@@ -22,6 +24,14 @@ clearCompletedBtn.addEventListener("click", clearCompletedTasks);
 filterAllBtn.addEventListener("click", () => setFilter("all"));
 filterActiveBtn.addEventListener("click", () => setFilter("active"));
 filterCompletedBtn.addEventListener("click", () => setFilter("completed"));
+
+if (toggleAboutBtn && aboutSection) {
+  toggleAboutBtn.addEventListener("click", () => {
+    const hidden = aboutSection.classList.toggle("hidden");
+    toggleAboutBtn.setAttribute("aria-expanded", String(!hidden));
+    toggleAboutBtn.textContent = hidden ? "Hakkında Göster" : "Hakkında Gizle";
+  });
+}
 
 function handleAddTask() {
   const taskText = taskInput.value.trim();
