@@ -9,14 +9,7 @@ const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
 const tagFiltersDiv = document.getElementById("tagFilters");
-const saveFilterBtn = document.getElementById("saveFilterBtn");
-const savedFilterName = document.getElementById("savedFilterName");
-const savedFiltersList = document.getElementById("savedFiltersList");
-const shareBtn = document.getElementById("shareBtn");
 const snackbar = document.getElementById("snackbar");
-const exportBtn = document.getElementById("exportBtn");
-const importBtn = document.getElementById("importBtn");
-const importFile = document.getElementById("importFile");
 const taskInput = document.getElementById("taskInput");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
@@ -33,7 +26,6 @@ function normalizeTask(t) {
 tasks = tasks.map(normalizeTask);
 let currentFilter = "all";
 let activeTagFilters = [];
-let savedFilters = JSON.parse(localStorage.getItem("savedFilters")) || [];
 let lastDeleted = null; // { task, index } or { tasks: [...] }
 let undoTimeoutId = null;
 let draggingId = null;
@@ -47,11 +39,7 @@ clearCompletedBtn?.addEventListener("click", clearCompletedTasks);
 filterAllBtn?.addEventListener("click", () => setFilter("all"));
 filterActiveBtn?.addEventListener("click", () => setFilter("active"));
 filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
-exportBtn?.addEventListener("click", exportTasks);
-importBtn?.addEventListener("click", () => importFile && importFile.click());
-importFile?.addEventListener("change", handleImportFile);
-saveFilterBtn?.addEventListener("click", saveCurrentFilter);
-shareBtn?.addEventListener("click", shareCurrentView);
+// export/import/share and saved-filters removed for a simpler UI
 
 function handleAddTask() {
   const taskText = taskInput.value.trim();
@@ -330,44 +318,6 @@ function toggleTagFilter(tag) {
   renderTasks();
 }
 
-function saveCurrentFilter() {
-  const name = (savedFilterName?.value || '').trim();
-  if (!name) { alert('Önce bir isim girin.'); return; }
-  const f = { id: Date.now(), name, filter: { type: currentFilter, tags: activeTagFilters.slice() } };
-  savedFilters.push(f);
-  localStorage.setItem('savedFilters', JSON.stringify(savedFilters));
-  renderSavedFilters();
-}
-
-function renderSavedFilters() {
-  if (!savedFiltersList) return;
-  savedFiltersList.innerHTML = '';
-  savedFilters.forEach(s => {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'saved-filter-item';
-    const btn = document.createElement('button');
-    btn.textContent = s.name;
-    btn.addEventListener('click', () => { applySavedFilter(s); });
-    const del = document.createElement('button');
-    del.textContent = 'x';
-    del.className = 'saved-filter-del';
-    del.addEventListener('click', () => { deleteSavedFilter(s.id); });
-    wrapper.appendChild(btn); wrapper.appendChild(del);
-    savedFiltersList.appendChild(wrapper);
-  });
-}
-
-function applySavedFilter(s) {
-  currentFilter = s.filter.type || 'all';
-  activeTagFilters = Array.isArray(s.filter.tags) ? s.filter.tags.slice() : [];
-  renderTagFilters(); renderTasks();
-}
-
-function deleteSavedFilter(id) {
-  savedFilters = savedFilters.filter(s => s.id !== id);
-  localStorage.setItem('savedFilters', JSON.stringify(savedFilters));
-  renderSavedFilters();
-}
 
 function updateRemainingCount() {
   const remaining = tasks.filter((t) => !t.completed).length;
@@ -414,81 +364,5 @@ function hideSnackbar() {
   if (!snackbar) return;
   snackbar.classList.remove("show");
 }
-
-function exportTasks() {
-  const dataStr = JSON.stringify(tasks, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "todo-tasks.json";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function handleImportFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function () {
-    try {
-      const parsed = JSON.parse(reader.result);
-      if (!Array.isArray(parsed)) {
-        alert("Beklenen format: görevlerin bulunduğu bir JSON dizisi.");
-        return;
-      }
-      if (!confirm("İçe aktarım mevcut görevleri değiştirecek. Onaylıyor musunuz?")) return;
-      tasks = parsed.map(normalizeTask);
-      saveAndRender();
-      showSnackbar("Görevler içe aktarıldı.", false);
-    } catch (err) {
-      alert("Dosya okunamadı veya JSON formatı hatalı.");
-    } finally {
-      importFile.value = "";
-    }
-  };
-  reader.readAsText(file);
-}
-
-// Share (URL) helpers
-function base64Encode(str) { return btoa(unescape(encodeURIComponent(str))); }
-function base64Decode(b) { return decodeURIComponent(escape(atob(b))); }
-
-function shareCurrentView() {
-  try {
-    const shareData = { tasks, filter: { type: currentFilter, tags: activeTagFilters } };
-    const encoded = base64Encode(JSON.stringify(shareData));
-    const url = location.origin + location.pathname + '#share=' + encoded;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(()=> showSnackbar('Paylaşım linki kopyalandı.', false));
-    } else {
-      const a = document.createElement('a'); a.href = url; a.style.display='none'; document.body.appendChild(a); a.select; showSnackbar('Link hazır, kopyalayın.', false);
-    }
-  } catch (err) {
-    alert('Paylaşım oluşturulamadı.');
-  }
-}
-
-function tryLoadFromHash() {
-  try {
-    if (!location.hash) return;
-    const m = location.hash.match(/^#share=(.+)/);
-    if (!m) return;
-    const decoded = base64Decode(m[1]);
-    const parsed = JSON.parse(decoded);
-    if (!confirm('Paylaşılan veri bulundu. Görevleri içe aktarmak istiyor musunuz? Mevcut görevler değişecek.')) return;
-    tasks = Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : tasks;
-    currentFilter = parsed.filter?.type || 'all';
-    activeTagFilters = Array.isArray(parsed.filter?.tags) ? parsed.filter.tags : [];
-    saveAndRender();
-  } catch (err) {
-    console.warn('Hash paylaşımı okunamadı', err);
-  }
-}
-
 renderTasks();
 renderTagFilters();
-renderSavedFilters();
-tryLoadFromHash();

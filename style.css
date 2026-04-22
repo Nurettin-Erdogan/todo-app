@@ -75,16 +75,7 @@ body{
 .tag-filter-btn{background:transparent;border:1px solid #e6e9ef;padding:6px 8px;border-radius:8px;cursor:pointer;margin-right:6px}
 .tag-filter-btn.active{background:#fff2cc;border-color:#f59e0b;color:#92400e}
 
-/* Saved filters */
-.saved-filters{display:flex;gap:8px;align-items:center}
-.saved-filters input{padding:6px;border-radius:8px;border:1px solid #e6e9ef}
-.saved-filters-list{display:flex;gap:6px;flex-wrap:wrap}
-.saved-filter-item{display:flex;gap:6px;align-items:center}
-.saved-filter-item button{padding:6px 8px;border-radius:8px;border:1px solid #e6e9ef;background:transparent;cursor:pointer}
-.saved-filter-del{background:#ef4444;color:#fff;border:none;padding:4px 6px;border-radius:6px;cursor:pointer}
-
-/* Share button tweak */
-#shareBtn{background:#06b6d4;color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
+/* Saved filters and share button removed for simpler UI */
 
 .about{padding:12px 8px}
 .about h2{margin:10px 0 6px;font-size:1rem}
