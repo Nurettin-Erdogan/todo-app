@@ -1,5 +1,4 @@
 const taskDate = document.getElementById("taskDate");
-const taskTags = document.getElementById("taskTags");
 const taskPriority = document.getElementById("taskPriority");
 const addBtn = document.getElementById("addBtn");
 const taskList = document.getElementById("taskList");
@@ -8,7 +7,6 @@ const clearCompletedBtn = document.getElementById("clearCompletedBtn");
 const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
-const tagFiltersDiv = document.getElementById("tagFilters");
 const snackbar = document.getElementById("snackbar");
 const taskInput = document.getElementById("taskInput");
 
@@ -20,12 +18,10 @@ function normalizeTask(t) {
     completed: !!t.completed,
     date: t.date ?? "",
     priority: t.priority ?? "medium",
-    tags: Array.isArray(t.tags) ? t.tags : (t.tags ? String(t.tags).split(/,\s*/).map(s=>s.trim()).filter(Boolean) : []),
   };
 }
 tasks = tasks.map(normalizeTask);
 let currentFilter = "all";
-let activeTagFilters = [];
 let lastDeleted = null; // { task, index } or { tasks: [...] }
 let undoTimeoutId = null;
 let draggingId = null;
@@ -45,21 +41,19 @@ function handleAddTask() {
   const taskText = taskInput.value.trim();
   const date = taskDate?.value || "";
   const priority = taskPriority?.value || "medium";
-  const tags = taskTags?.value ? taskTags.value.split(/,\s*/).map(s=>s.trim()).filter(Boolean) : [];
 
   if (taskText === "") {
     alert("Lütfen bir görev giriniz.");
     return;
   }
 
-  const task = { id: Date.now(), text: taskText, completed: false, date, priority, tags };
+  const task = { id: Date.now(), text: taskText, completed: false, date, priority };
   tasks.push(task);
   saveAndRender();
 
   taskInput.value = "";
   if (taskDate) taskDate.value = "";
   if (taskPriority) taskPriority.value = "medium";
-  if (taskTags) taskTags.value = "";
   taskInput.focus();
 }
 
@@ -114,9 +108,6 @@ function renderTasks() {
   const visible = tasks.filter((t) => {
     if (currentFilter === "active" && t.completed) return false;
     if (currentFilter === "completed" && !t.completed) return false;
-    if (activeTagFilters.length > 0) {
-      if (!Array.isArray(t.tags) || !t.tags.some(tag => activeTagFilters.includes(tag))) return false;
-    }
     return true;
   });
 
@@ -155,22 +146,7 @@ function renderTasks() {
       badge.textContent = task.priority === "high" ? "Yüksek" : task.priority === "medium" ? "Orta" : "Düşük";
       meta.appendChild(badge);
 
-      // tags
-      if (Array.isArray(task.tags) && task.tags.length) {
-        const tagsWrap = document.createElement("div");
-        tagsWrap.className = "tags-wrap";
-        task.tags.forEach((tg) => {
-          const tspan = document.createElement("span");
-          tspan.className = "tag-badge";
-          tspan.textContent = tg;
-          tspan.addEventListener("click", (e) => {
-            e.stopPropagation();
-            toggleTagFilter(tg);
-          });
-          tagsWrap.appendChild(tspan);
-        });
-        meta.appendChild(tagsWrap);
-      }
+      // tags removed for simpler UI
 
       const textWrap = document.createElement("div");
       textWrap.className = "task-main";
@@ -241,11 +217,9 @@ function renderTasks() {
 function editTaskDetails(task) {
   const newText = prompt("Görev metni:", task.text);
   if (newText === null) return;
-  const newTags = prompt("Etiketler (virgülle ayır):", (task.tags || []).join(", "));
-  if (newTags === null) return;
   const newDate = prompt("Son tarih (YYYY-MM-DD):", task.date || "");
+  if (newDate === null) return;
   task.text = newText.trim();
-  task.tags = newTags.split(/,\s*/).map(s => s.trim()).filter(Boolean);
   task.date = newDate ? String(newDate).trim() : "";
   tasks = tasks.map((t)=> t.id===task.id ? normalizeTask(task) : t);
   saveAndRender();
@@ -297,27 +271,6 @@ function updateFilterUI() {
   if (currentFilter === "completed") document.getElementById("filterCompleted").classList.add("active");
 }
 
-function renderTagFilters() {
-  if (!tagFiltersDiv) return;
-  const allTags = Array.from(new Set(tasks.flatMap(t => t.tags || [])));
-  tagFiltersDiv.innerHTML = "";
-  allTags.forEach(tg => {
-    const b = document.createElement('button');
-    b.className = 'tag-filter-btn' + (activeTagFilters.includes(tg) ? ' active' : '');
-    b.textContent = tg;
-    b.addEventListener('click', () => toggleTagFilter(tg));
-    tagFiltersDiv.appendChild(b);
-  });
-  if (allTags.length === 0) tagFiltersDiv.textContent = '';
-}
-
-function toggleTagFilter(tag) {
-  const idx = activeTagFilters.indexOf(tag);
-  if (idx === -1) activeTagFilters.push(tag); else activeTagFilters.splice(idx,1);
-  renderTagFilters();
-  renderTasks();
-}
-
 
 function updateRemainingCount() {
   const remaining = tasks.filter((t) => !t.completed).length;
@@ -365,4 +318,3 @@ function hideSnackbar() {
   snackbar.classList.remove("show");
 }
 renderTasks();
-renderTagFilters();
