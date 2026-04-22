@@ -1,7 +1,3 @@
-const taskInput = document.getElementById("taskInput");
-const addBtn = document.getElementById("addBtn");
-
-const taskInput = document.getElementById("taskInput");
 const taskDate = document.getElementById("taskDate");
 const taskPriority = document.getElementById("taskPriority");
 const addBtn = document.getElementById("addBtn");
@@ -46,14 +42,6 @@ filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
 exportBtn?.addEventListener("click", exportTasks);
 importBtn?.addEventListener("click", () => importFile && importFile.click());
 importFile?.addEventListener("change", handleImportFile);
-if (toggleAboutBtn && aboutSection) {
-  toggleAboutBtn.addEventListener("click", () => {
-    const hidden = aboutSection.classList.toggle("hidden");
-    toggleAboutBtn.setAttribute("aria-expanded", String(!hidden));
-    toggleAboutBtn.textContent = hidden ? "Hakkında Göster" : "Hakkında Gizle";
-  });
-}
-
 if (toggleAboutBtn && aboutSection) {
   toggleAboutBtn.addEventListener("click", () => {
     const hidden = aboutSection.classList.toggle("hidden");
