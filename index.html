@@ -8,15 +8,79 @@
 </head>
 <body>
   <div class="container">
-    <h1>To-Do List</h1>
+    <header class="header">
+      <h1>To-Do List</h1>
+      <p class="subtitle">Basit ve kullanıcı dostu görev yöneticisi</p>
+    </header>
 
-    <div class="input-area">
-      <input type="text" id="taskInput" placeholder="Görev gir..." />
-      <button id="addBtn">Ekle</button>
-    </div>
+    <main class="app">
+      <section class="todo-app">
+        <div class="input-area">
+          <input type="text" id="taskInput" placeholder="Yeni görev yazın ve Enter'a basın..." aria-label="Yeni görev" />
+          <button id="addBtn" aria-label="Görev ekle">Ekle</button>
+        </div>
 
-    <ul id="taskList"></ul>
+        <div class="controls">
+          <div class="stats"><span id="remainingCount">0</span> görev kaldı</div>
+
+          <div class="filters" role="tablist" aria-label="Filtreler">
+            <button class="filter-btn active" id="filterAll">Tümü</button>
+            <button class="filter-btn" id="filterActive">Aktif</button>
+            <button class="filter-btn" id="filterCompleted">Tamamlanan</button>
+          </div>
+
+          <div class="actions">
+            <button id="clearCompletedBtn">Tamamlananları Temizle</button>
+          </div>
+        </div>
+
+        <ul id="taskList" class="task-list" aria-live="polite"></ul>
+      </section>
+
+      <section class="about">
+        <h2>Programın Özellikleri</h2>
+        <ul>
+          <li>Görev ekleme</li>
+          <li>Görevleri listeleme</li>
+          <li>Görev silme</li>
+          <li>Görevleri tamamlandı olarak işaretleme</li>
+          <li>Enter tuşu ile hızlı görev ekleme</li>
+          <li>Basit, anlaşılır ve kullanıcı dostu bir arayüze sahiptir</li>
+          <li>Tamamlanan görevleri görsel olarak farklı şekilde gösterir</li>
+          <li>Tarayıcı üzerinden kolay kullanım</li>
+        </ul>
+
+        <h2>To-Do List Uygulaması Özellikleri</h2>
+        <ul>
+          <li>Kullanıcının yeni görev eklemesine olanak sağlar.</li>
+          <li>Eklenen görevleri liste halinde görüntüler.</li>
+          <li>Görevlerin tamamlandı olarak işaretlenmesini sağlar.</li>
+          <li>İstenilen görevlerin silinmesine imkân tanır.</li>
+          <li>Enter tuşu desteği ile hızlı görev ekleme sunar.</li>
+          <li>Basit, anlaşılır ve kullanıcı dostu bir arayüze sahiptir.</li>
+          <li>Tamamlanan görevleri görsel olarak farklı şekilde gösterir.</li>
+        </ul>
+
+        <h2>Teknik Özellikler</h2>
+        <ul>
+          <li>HTML ile sayfa yapısı oluşturuldu.</li>
+          <li>CSS ile kullanıcı arayüzü tasarlandı.</li>
+          <li>JavaScript ile görev ekleme, silme ve tamamlama işlemleri geliştirildi.</li>
+          <li>DOM manipülasyonu kullanılarak dinamik görev listesi oluşturuldu.</li>
+          <li>Kullanıcı etkileşimleri buton ve klavye olayları ile yönetildi.</li>
+          <li>localStorage kullanılarak görevler tarayıcıda saklanır ve kalıcı hale gelir.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <small>To-Do List — Açık kaynak, basit ve kullanışlı.</small>
+    </footer>
   </div>
+
+</main>
+
+    <div id="snackbar" class="snackbar" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>
