@@ -11,8 +11,7 @@ const snackbar = document.getElementById("snackbar");
 const exportBtn = document.getElementById("exportBtn");
 const importBtn = document.getElementById("importBtn");
 const importFile = document.getElementById("importFile");
-const toggleAboutBtn = document.getElementById("toggleAboutBtn");
-const aboutSection = document.getElementById("about");
+const taskInput = document.getElementById("taskInput");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 function normalizeTask(t) {
@@ -42,13 +41,6 @@ filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
 exportBtn?.addEventListener("click", exportTasks);
 importBtn?.addEventListener("click", () => importFile && importFile.click());
 importFile?.addEventListener("change", handleImportFile);
-if (toggleAboutBtn && aboutSection) {
-  toggleAboutBtn.addEventListener("click", () => {
-    const hidden = aboutSection.classList.toggle("hidden");
-    toggleAboutBtn.setAttribute("aria-expanded", String(!hidden));
-    toggleAboutBtn.textContent = hidden ? "Hakkında Göster" : "Hakkında Gizle";
-  });
-}
 
 function handleAddTask() {
   const taskText = taskInput.value.trim();
