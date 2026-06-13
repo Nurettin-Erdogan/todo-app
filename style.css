@@ -1091,3 +1091,13 @@ select:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* İstenmeyen açıklama ve sıralama alanlarını gizle */
+.progress-message,
+.section-hint,
+.footer,
+.drag-handle,
+.reorder-actions {
+  display: none !important;
+}
