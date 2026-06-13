@@ -1,310 +1,621 @@
+const STORAGE_KEY = "gorev-listesi.tasks.v1";
+const LEGACY_STORAGE_KEY = "tasks";
+const VALID_PRIORITIES = ["low", "medium", "high"];
+const PRIORITY_LABELS = { low: "Düşük", medium: "Orta", high: "Yüksek" };
+
+const taskForm = document.getElementById("taskForm");
+const taskInput = document.getElementById("taskInput");
 const taskDate = document.getElementById("taskDate");
 const taskPriority = document.getElementById("taskPriority");
-const addBtn = document.getElementById("addBtn");
 const taskList = document.getElementById("taskList");
+const searchInput = document.getElementById("searchInput");
 const remainingCount = document.getElementById("remainingCount");
+const resultCount = document.getElementById("resultCount");
+const totalCount = document.getElementById("totalCount");
+const activeCount = document.getElementById("activeCount");
+const completedCount = document.getElementById("completedCount");
+const completionRate = document.getElementById("completionRate");
+const progressBar = document.getElementById("progressBar");
+const progressTrack = document.querySelector(".progress-track");
+const progressMessage = document.getElementById("progressMessage");
 const clearCompletedBtn = document.getElementById("clearCompletedBtn");
 const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
 const snackbar = document.getElementById("snackbar");
-const taskInput = document.getElementById("taskInput");
+const editModal = document.getElementById("editModal");
+const editModalClose = document.getElementById("editModalClose");
+const editTaskForm = document.getElementById("editTaskForm");
+const editTaskText = document.getElementById("editTaskText");
+const editTaskDate = document.getElementById("editTaskDate");
+const editTaskPriority = document.getElementById("editTaskPriority");
+const editTaskCancel = document.getElementById("editTaskCancel");
+const editModalSubtitle = document.getElementById("editModalSubtitle");
+const editModalPanel = document.querySelector(".edit-modal-panel");
+const installBtn = document.getElementById("installBtn");
+const offlineBanner = document.getElementById("offlineBanner");
+const updateBanner = document.getElementById("updateBanner");
+const refreshAppBtn = document.getElementById("refreshAppBtn");
+const launchScreen = document.getElementById("launchScreen");
 
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-function normalizeTask(t) {
-  return {
-    id: t.id ?? Date.now(),
-    text: t.text ?? "",
-    completed: !!t.completed,
-    date: t.date ?? "",
-    priority: t.priority ?? "medium",
-  };
-}
-tasks = tasks.map(normalizeTask);
+let tasks = loadTasks();
 let currentFilter = "all";
-let lastDeleted = null; // { task, index } or { tasks: [...] }
+let searchQuery = "";
+let lastDeleted = null;
 let undoTimeoutId = null;
 let draggingId = null;
+let editingTaskId = null;
+let modalCloseTimer = null;
+let focusBeforeModal = null;
+let deferredInstallPrompt = null;
+let serviceWorkerRegistration = null;
+let storagePersistenceRequested = false;
+let reloadingForUpdate = false;
 
-addBtn?.addEventListener("click", handleAddTask);
-taskInput?.addEventListener("keydown", function (e) {
-  if (e.key === "Enter") handleAddTask();
+taskForm?.addEventListener("submit", handleAddTask);
+searchInput?.addEventListener("input", () => {
+  searchQuery = searchInput.value.trim().toLocaleLowerCase("tr-TR");
+  renderTasks();
 });
-
 clearCompletedBtn?.addEventListener("click", clearCompletedTasks);
 filterAllBtn?.addEventListener("click", () => setFilter("all"));
 filterActiveBtn?.addEventListener("click", () => setFilter("active"));
 filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
-// export/import/share and saved-filters removed for a simpler UI
+editModalClose?.addEventListener("click", closeEditModal);
+editTaskCancel?.addEventListener("click", closeEditModal);
+editTaskForm?.addEventListener("submit", submitEditForm);
+editModal?.addEventListener("click", (event) => {
+  if (event.target === editModal) closeEditModal();
+});
+document.addEventListener("keydown", handleGlobalKeydown);
+installBtn?.addEventListener("click", installApp);
+refreshAppBtn?.addEventListener("click", applyServiceWorkerUpdate);
+window.addEventListener("online", updateConnectionStatus);
+window.addEventListener("offline", updateConnectionStatus);
+window.addEventListener("storage", syncTasksFromOtherTab);
+window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  if (installBtn) installBtn.hidden = true;
+  showSnackbar("Görev Listesi cihazına yüklendi.");
+});
 
-function handleAddTask() {
-  const taskText = taskInput.value.trim();
-  const date = taskDate?.value || "";
-  const priority = taskPriority?.value || "medium";
+function loadTasks() {
+  try {
+    const currentValue = localStorage.getItem(STORAGE_KEY);
+    const legacyValue = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const storedValue = currentValue || legacyValue;
+    if (!storedValue) return [];
+    const parsed = JSON.parse(storedValue);
+    if (!Array.isArray(parsed)) return [];
+    const normalizedTasks = parsed.map(normalizeTask).filter((task) => task.text);
 
-  if (taskText === "") {
-    alert("Lütfen bir görev giriniz.");
+    if (!currentValue && legacyValue) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedTasks));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+
+    return normalizedTasks;
+  } catch (error) {
+    console.warn("Görev verileri okunamadı:", error);
+    return [];
+  }
+}
+
+function normalizeTask(task = {}) {
+  const priority = VALID_PRIORITIES.includes(task.priority) ? task.priority : "medium";
+  const rawDate = String(task.date ?? "");
+  const id = ["string", "number"].includes(typeof task.id) && String(task.id).trim()
+    ? task.id
+    : createTaskId();
+  return {
+    id,
+    text: String(task.text ?? "").trim().slice(0, 180),
+    completed: Boolean(task.completed),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && parseLocalDate(rawDate) ? rawDate : "",
+    priority,
+  };
+}
+
+function createTaskId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function handleAddTask(event) {
+  event.preventDefault();
+  const text = taskInput.value.trim();
+
+  if (!text) {
+    showSnackbar("Görev metni boş olamaz.");
+    taskInput.focus();
     return;
   }
 
-  const task = { id: Date.now(), text: taskText, completed: false, date, priority };
-  tasks.push(task);
-  saveAndRender();
+  tasks.push(normalizeTask({
+    id: createTaskId(),
+    text,
+    date: taskDate?.value || "",
+    priority: taskPriority?.value || "medium",
+  }));
 
-  taskInput.value = "";
-  if (taskDate) taskDate.value = "";
-  if (taskPriority) taskPriority.value = "medium";
+  saveAndRender();
+  taskForm.reset();
+  taskPriority.value = "medium";
   taskInput.focus();
+  showSnackbar("Görev plana eklendi.");
 }
 
 function toggleTask(id) {
-  tasks = tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+  tasks = tasks.map((task) => (
+    String(task.id) === String(id) ? { ...task, completed: !task.completed } : task
+  ));
   saveAndRender();
+  focusTaskControl(id, ".task-check");
 }
 
 function deleteTask(id) {
-  const idx = tasks.findIndex((t) => t.id === id);
-  if (idx === -1) return;
-  lastDeleted = { task: tasks[idx], index: idx };
-  tasks.splice(idx, 1);
+  const index = tasks.findIndex((task) => String(task.id) === String(id));
+  if (index === -1) return;
+
+  lastDeleted = { task: tasks[index], index };
+  tasks.splice(index, 1);
   saveAndRender();
-  showSnackbar(`"${lastDeleted.task.text}" silindi.`, true);
+  showSnackbar(`“${lastDeleted.task.text}” silindi.`, true);
 }
 
 function clearCompletedTasks() {
-  const removed = tasks.filter((t) => t.completed);
-  if (removed.length === 0) {
-    alert("Silinecek tamamlanmış görev yok.");
+  const removed = tasks
+    .map((task, index) => ({ task, index }))
+    .filter(({ task }) => task.completed);
+
+  if (!removed.length) {
+    showSnackbar("Temizlenecek tamamlanmış görev yok.");
     return;
   }
+
   lastDeleted = { tasks: removed };
-  tasks = tasks.filter((t) => !t.completed);
+  tasks = tasks.filter((task) => !task.completed);
   saveAndRender();
-  showSnackbar(`${removed.length} tamamlanan görev temizlendi.`, true);
+  showSnackbar(`${removed.length} tamamlanmış görev temizlendi.`, true);
 }
 
 function undoDelete() {
   if (!lastDeleted) return;
+
   if (lastDeleted.tasks) {
-    // restore removed completed tasks at end
-    tasks = tasks.concat(lastDeleted.tasks);
+    [...lastDeleted.tasks]
+      .sort((a, b) => a.index - b.index)
+      .forEach(({ task, index }) => tasks.splice(index, 0, task));
   } else {
     tasks.splice(lastDeleted.index, 0, lastDeleted.task);
   }
+
   lastDeleted = null;
   clearTimeout(undoTimeoutId);
   saveAndRender();
   hideSnackbar();
 }
 
+function moveTask(id, direction) {
+  const index = tasks.findIndex((task) => String(task.id) === String(id));
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= tasks.length) return;
+
+  [tasks[index], tasks[nextIndex]] = [tasks[nextIndex], tasks[index]];
+  saveAndRender();
+  focusTaskControl(id, ".move-btn:not(:disabled)");
+}
+
+function findTaskElement(id) {
+  return [...document.querySelectorAll(".task-item")]
+    .find((element) => String(element.dataset.id) === String(id));
+}
+
+function focusTaskControl(id, selector) {
+  const control = findTaskElement(id)?.querySelector(selector);
+  if (control instanceof HTMLElement) control.focus();
+  else taskInput?.focus();
+}
+
 function saveAndRender() {
-  localStorage.setItem("tasks", JSON.stringify(tasks));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    requestPersistentStorage();
+  } catch (error) {
+    console.warn("Görevler kaydedilemedi:", error);
+    showSnackbar("Değişiklik tarayıcıya kaydedilemedi.");
+  }
   renderTasks();
 }
 
+function getVisibleTasks() {
+  return tasks.filter((task) => {
+    const matchesFilter = currentFilter === "all"
+      || (currentFilter === "active" && !task.completed)
+      || (currentFilter === "completed" && task.completed);
+    const matchesSearch = !searchQuery
+      || task.text.toLocaleLowerCase("tr-TR").includes(searchQuery);
+    return matchesFilter && matchesSearch;
+  });
+}
+
 function renderTasks() {
-  taskList.innerHTML = "";
+  if (!taskList) return;
+  taskList.replaceChildren();
 
-  const visible = tasks.filter((t) => {
-    if (currentFilter === "active" && t.completed) return false;
-    if (currentFilter === "completed" && !t.completed) return false;
-    return true;
-  });
+  const visibleTasks = getVisibleTasks();
+  const canReorder = currentFilter === "all" && !searchQuery;
 
-  if (visible.length === 0) {
-    const empty = document.createElement("li");
-    empty.className = "empty";
-    empty.textContent = "Hiç görev yok. Yeni görev ekleyin.";
-    taskList.appendChild(empty);
+  if (!visibleTasks.length) {
+    taskList.appendChild(createEmptyState());
   }
 
-  visible.forEach((task) => {
-    const li = document.createElement("li");
-    li.className = "task-item";
-    li.dataset.id = task.id;
-    li.draggable = true;
-
-    const span = document.createElement("span");
-    span.textContent = task.text;
-    span.className = task.completed ? "task-text completed" : "task-text";
-    span.addEventListener("click", () => toggleTask(task.id));
-    span.addEventListener("dblclick", () => startEditing(span, task));
-
-      const meta = document.createElement("div");
-      meta.className = "task-meta";
-
-      if (task.date) {
-        const due = document.createElement("span");
-        due.className = "due";
-        due.textContent = formatDate(task.date);
-        if (isPastDate(task.date) && !task.completed) due.classList.add("due-past");
-        meta.appendChild(due);
-      }
-
-      const badge = document.createElement("span");
-      badge.className = `badge priority-${task.priority}`;
-      badge.textContent = task.priority === "high" ? "Yüksek" : task.priority === "medium" ? "Orta" : "Düşük";
-      meta.appendChild(badge);
-
-      // tags removed for simpler UI
-
-      const textWrap = document.createElement("div");
-      textWrap.className = "task-main";
-      textWrap.appendChild(span);
-      textWrap.appendChild(meta);
-
-    const buttonContainer = document.createElement("div");
-    buttonContainer.classList.add("task-buttons");
-
-    const completeBtn = document.createElement("button");
-    completeBtn.textContent = task.completed ? "Geri Al" : "Tamamlandı";
-    completeBtn.addEventListener("click", () => toggleTask(task.id));
-
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "Düzenle";
-    editBtn.addEventListener("click", () => editTaskDetails(task));
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Sil";
-    deleteBtn.addEventListener("click", () => deleteTask(task.id));
-
-    buttonContainer.appendChild(completeBtn);
-    buttonContainer.appendChild(editBtn);
-    buttonContainer.appendChild(deleteBtn);
-
-    li.appendChild(textWrap);
-    li.appendChild(buttonContainer);
-
-    // drag events
-    li.addEventListener("dragstart", (e) => {
-      draggingId = task.id;
-      li.classList.add("dragging");
-      e.dataTransfer.effectAllowed = "move";
-      try { e.dataTransfer.setData("text/plain", String(task.id)); } catch (err) {}
-    });
-    li.addEventListener("dragend", () => {
-      draggingId = null;
-      li.classList.remove("dragging");
-      document.querySelectorAll(".task-item").forEach((el) => el.classList.remove("drag-over"));
-    });
-
-    li.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      li.classList.add("drag-over");
-    });
-    li.addEventListener("dragleave", () => li.classList.remove("drag-over"));
-
-    li.addEventListener("drop", (e) => {
-      e.preventDefault();
-      li.classList.remove("drag-over");
-      const draggedId = draggingId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
-      if (!draggedId) return;
-      const fromIndex = tasks.findIndex((t) => String(t.id) === String(draggedId));
-      const toIndex = tasks.findIndex((t) => String(t.id) === String(task.id));
-      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
-      const [moved] = tasks.splice(fromIndex, 1);
-      tasks.splice(toIndex, 0, moved);
-      saveAndRender();
-    });
-
-    taskList.appendChild(li);
+  visibleTasks.forEach((task) => {
+    const index = tasks.findIndex((item) => String(item.id) === String(task.id));
+    taskList.appendChild(createTaskElement(task, index, canReorder));
   });
 
+  updateDashboard(visibleTasks.length);
   updateFilterUI();
-  updateRemainingCount();
 }
 
-function editTaskDetails(task) {
-  const newText = prompt("Görev metni:", task.text);
-  if (newText === null) return;
-  const newDate = prompt("Son tarih (YYYY-MM-DD):", task.date || "");
-  if (newDate === null) return;
-  task.text = newText.trim();
-  task.date = newDate ? String(newDate).trim() : "";
-  tasks = tasks.map((t)=> t.id===task.id ? normalizeTask(task) : t);
-  saveAndRender();
+function createEmptyState() {
+  const empty = document.createElement("li");
+  empty.className = "empty";
+
+  const mark = document.createElement("span");
+  mark.className = "empty-mark";
+  mark.setAttribute("aria-hidden", "true");
+  mark.textContent = searchQuery ? "⌕" : "✓";
+
+  const title = document.createElement("p");
+  title.className = "empty-title";
+  title.textContent = searchQuery
+    ? "Aramana uygun görev bulunamadı"
+    : currentFilter === "completed"
+      ? "Henüz tamamlanan görev yok"
+      : currentFilter === "active"
+        ? "Tüm görevler tamamlandı"
+        : "Planın yeni görevini bekliyor";
+
+  const hint = document.createElement("p");
+  hint.className = "empty-hint";
+  hint.textContent = searchQuery
+    ? "Farklı bir kelime deneyebilir veya aramayı temizleyebilirsin."
+    : currentFilter === "all"
+      ? "Yukarıdaki alandan küçük bir adım ekleyerek başla."
+      : "Diğer görevleri görmek için filtreyi değiştirebilirsin.";
+
+  empty.append(mark, title, hint);
+  return empty;
 }
 
-function startEditing(span, task) {
-  const li = span.closest("li");
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = task.text;
-  input.className = "edit-input";
-  li.replaceChild(input, span);
-  input.focus();
-  input.setSelectionRange(input.value.length, input.value.length);
+function createTaskElement(task, index, canReorder) {
+  const li = document.createElement("li");
+  li.className = `task-item task-${task.priority}`;
+  if (task.completed) li.classList.add("is-completed");
+  li.dataset.id = task.id;
+  li.draggable = canReorder;
 
-  function saveEdit() {
-    const newText = input.value.trim();
-    if (!newText) {
-      alert("Görev boş olamaz.");
-      input.focus();
-      return;
-    }
-    tasks = tasks.map((t) => (t.id === task.id ? { ...t, text: newText } : t));
-    saveAndRender();
+  const dragHandle = document.createElement("span");
+  dragHandle.className = "drag-handle";
+  dragHandle.textContent = "⋮⋮";
+  dragHandle.title = canReorder ? "Sürükleyerek sırala" : "Sıralama için Tümü filtresini aç";
+  dragHandle.setAttribute("aria-hidden", "true");
+
+  const checkButton = document.createElement("button");
+  checkButton.type = "button";
+  checkButton.className = "task-check";
+  checkButton.setAttribute("aria-pressed", String(task.completed));
+  checkButton.setAttribute("aria-label", task.completed ? "Görevi yeniden aktif yap" : "Görevi tamamla");
+  checkButton.textContent = task.completed ? "✓" : "";
+  checkButton.addEventListener("click", () => toggleTask(task.id));
+
+  const taskMain = document.createElement("div");
+  taskMain.className = "task-main";
+  taskMain.addEventListener("dblclick", () => openEditModal(task));
+
+  const taskText = document.createElement("p");
+  taskText.className = "task-text";
+  taskText.textContent = task.text;
+
+  const meta = document.createElement("div");
+  meta.className = "task-meta";
+
+  const badge = document.createElement("span");
+  badge.className = `badge priority-${task.priority}`;
+  badge.textContent = PRIORITY_LABELS[task.priority];
+  meta.appendChild(badge);
+
+  if (task.date) {
+    const dueInfo = getDueInfo(task.date);
+    const due = document.createElement("time");
+    due.className = `due ${dueInfo.className}`.trim();
+    due.textContent = dueInfo.label;
+    due.title = formatDate(task.date);
+    due.dateTime = task.date;
+    meta.appendChild(due);
   }
 
-  function cancelEdit() {
-    saveAndRender();
-  }
+  taskMain.append(taskText, meta);
 
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") saveEdit();
-    if (e.key === "Escape") cancelEdit();
+  const actions = document.createElement("div");
+  actions.className = "task-actions";
+
+  const reorderActions = document.createElement("div");
+  reorderActions.className = "reorder-actions";
+  reorderActions.hidden = !canReorder;
+  reorderActions.append(
+    createActionButton("↑", `“${task.text}” görevini yukarı taşı`, "move-btn", () => moveTask(task.id, -1), index === 0),
+    createActionButton("↓", `“${task.text}” görevini aşağı taşı`, "move-btn", () => moveTask(task.id, 1), index === tasks.length - 1),
+  );
+
+  actions.append(
+    reorderActions,
+    createActionButton("Düzenle", `“${task.text}” görevini düzenle`, "edit-btn", () => openEditModal(task)),
+    createActionButton("Sil", `“${task.text}” görevini sil`, "delete-btn", () => deleteTask(task.id)),
+  );
+
+  li.append(dragHandle, checkButton, taskMain, actions);
+
+  if (canReorder) addDragEvents(li, task.id);
+  return li;
+}
+
+function createActionButton(text, label, className, onClick, disabled = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = text;
+  button.setAttribute("aria-label", label);
+  button.disabled = disabled;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function addDragEvents(element, taskId) {
+  element.addEventListener("dragstart", (event) => {
+    draggingId = taskId;
+    element.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(taskId));
   });
 
-  input.addEventListener("blur", saveEdit);
+  element.addEventListener("dragend", () => {
+    draggingId = null;
+    document.querySelectorAll(".task-item").forEach((item) => {
+      item.classList.remove("dragging", "drag-over");
+    });
+  });
+
+  element.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    element.classList.add("drag-over");
+  });
+
+  element.addEventListener("dragleave", () => element.classList.remove("drag-over"));
+  element.addEventListener("drop", (event) => {
+    event.preventDefault();
+    element.classList.remove("drag-over");
+    const sourceId = draggingId || event.dataTransfer.getData("text/plain");
+    const fromIndex = tasks.findIndex((task) => String(task.id) === String(sourceId));
+    const toIndex = tasks.findIndex((task) => String(task.id) === String(taskId));
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+    const [movedTask] = tasks.splice(fromIndex, 1);
+    tasks.splice(toIndex, 0, movedTask);
+    saveAndRender();
+  });
 }
 
-function setFilter(f) {
-  currentFilter = f;
+function setFilter(filter) {
+  currentFilter = filter;
   renderTasks();
 }
 
 function updateFilterUI() {
-  const btns = document.querySelectorAll(".filter-btn");
-  btns.forEach((b) => b.classList.remove("active"));
-  if (currentFilter === "all") document.getElementById("filterAll").classList.add("active");
-  if (currentFilter === "active") document.getElementById("filterActive").classList.add("active");
-  if (currentFilter === "completed") document.getElementById("filterCompleted").classList.add("active");
+  const buttons = {
+    all: filterAllBtn,
+    active: filterActiveBtn,
+    completed: filterCompletedBtn,
+  };
+
+  Object.entries(buttons).forEach(([filter, button]) => {
+    const isActive = currentFilter === filter;
+    button?.classList.toggle("active", isActive);
+    button?.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
+function updateDashboard(visibleCount) {
+  const remaining = tasks.filter((task) => !task.completed).length;
+  const completed = tasks.length - remaining;
+  const rate = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
 
-function updateRemainingCount() {
-  const remaining = tasks.filter((t) => !t.completed).length;
-  remainingCount.textContent = remaining;
+  if (remainingCount) remainingCount.textContent = remaining;
+  if (totalCount) totalCount.textContent = tasks.length;
+  if (activeCount) activeCount.textContent = remaining;
+  if (completedCount) completedCount.textContent = completed;
+  if (completionRate) completionRate.textContent = `%${rate}`;
+  if (progressBar) progressBar.style.width = `${rate}%`;
+  if (progressTrack) progressTrack.setAttribute("aria-valuenow", String(rate));
+  if (clearCompletedBtn) clearCompletedBtn.disabled = completed === 0;
+  if (resultCount) {
+    resultCount.textContent = searchQuery || currentFilter !== "all"
+      ? `${visibleCount} görev gösteriliyor`
+      : "";
+  }
+
+  if (progressMessage) {
+    progressMessage.textContent = !tasks.length
+      ? "İlk görevini ekleyerek başlayabilirsin."
+      : rate === 100
+        ? "Harika, planındaki her şey tamamlandı."
+        : rate >= 60
+          ? "İyi gidiyorsun, bitiş çizgisi yakın."
+          : completed > 0
+            ? "İvme kazandın. Sıradaki küçük adıma geç."
+            : "Bir görevi tamamlamak ritmi başlatır.";
+  }
 }
 
-function formatDate(d) {
-  if (!d) return "";
-  const dt = new Date(d);
-  if (isNaN(dt)) return d;
-  return dt.toLocaleDateString("tr-TR");
+function parseLocalDate(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  const isValid = !Number.isNaN(date.getTime())
+    && date.getFullYear() === year
+    && date.getMonth() === month - 1
+    && date.getDate() === day;
+  return isValid ? date : null;
 }
 
-function isPastDate(d) {
-  if (!d) return false;
-  const dt = new Date(d);
+function formatDate(value) {
+  const date = parseLocalDate(value);
+  return date ? new Intl.DateTimeFormat("tr-TR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date) : value;
+}
+
+function getDueInfo(value) {
+  const date = parseLocalDate(value);
+  if (!date) return { label: value, className: "" };
+
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return dt < today;
+  const dueDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const difference = Math.round((dueDay - todayDay) / 86400000);
+
+  if (difference < 0) {
+    return { label: `${Math.abs(difference)} gün gecikti`, className: "due-past" };
+  }
+  if (difference === 0) return { label: "Bugün", className: "due-today" };
+  if (difference === 1) return { label: "Yarın", className: "due-soon" };
+  return { label: formatDate(value), className: "" };
+}
+
+function openEditModal(task) {
+  if (!editModal || !editTaskText || !editTaskDate || !editTaskPriority) return;
+  clearTimeout(modalCloseTimer);
+
+  const liveTask = tasks.find((item) => String(item.id) === String(task.id));
+  if (!liveTask) return;
+
+  focusBeforeModal = document.activeElement;
+  editingTaskId = liveTask.id;
+  editTaskText.value = liveTask.text;
+  editTaskDate.value = liveTask.date;
+  editTaskPriority.value = liveTask.priority;
+  if (editModalSubtitle) editModalSubtitle.textContent = liveTask.completed ? "Tamamlanmış görev" : "Aktif görev";
+  editModalPanel?.classList.remove("closing");
+  editModal.hidden = false;
+
+  requestAnimationFrame(() => {
+    editModal.classList.add("show");
+    editModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    editTaskText.focus();
+    editTaskText.select();
+  });
+}
+
+function closeEditModal() {
+  if (!editModal || editModal.hidden) return;
+  const taskIdToRestore = editingTaskId;
+  editModalPanel?.classList.add("closing");
+  editModal.classList.remove("show");
+  editModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+
+  modalCloseTimer = setTimeout(() => {
+    editModal.hidden = true;
+    editTaskForm?.reset();
+    editModalPanel?.classList.remove("closing");
+    editingTaskId = null;
+    const currentEditButton = taskIdToRestore
+      ? findTaskElement(taskIdToRestore)?.querySelector(".edit-btn")
+      : null;
+    if (currentEditButton instanceof HTMLElement) {
+      currentEditButton.focus();
+    } else if (focusBeforeModal instanceof HTMLElement && focusBeforeModal.isConnected) {
+      focusBeforeModal.focus();
+    } else {
+      taskInput?.focus();
+    }
+  }, 200);
+}
+
+function submitEditForm(event) {
+  event.preventDefault();
+  const newText = editTaskText?.value.trim();
+  if (!editingTaskId || !newText) {
+    showSnackbar("Görev metni boş olamaz.");
+    editTaskText?.focus();
+    return;
+  }
+
+  tasks = tasks.map((task) => (
+    String(task.id) === String(editingTaskId)
+      ? normalizeTask({
+        ...task,
+        text: newText,
+        date: editTaskDate?.value || "",
+        priority: editTaskPriority?.value || "medium",
+      })
+      : task
+  ));
+
+  saveAndRender();
+  closeEditModal();
+  showSnackbar("Görev güncellendi.");
+}
+
+function handleGlobalKeydown(event) {
+  if (!editModal || editModal.hidden) return;
+
+  if (event.key === "Escape") {
+    closeEditModal();
+    return;
+  }
+
+  if (event.key !== "Tab") return;
+  const focusable = [...editModal.querySelectorAll(
+    "button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
+  )];
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function showSnackbar(message, withUndo = false) {
   if (!snackbar) return;
-  snackbar.innerHTML = "";
-  const msg = document.createElement("span");
-  msg.textContent = message;
-  snackbar.appendChild(msg);
+  snackbar.replaceChildren();
+
+  const text = document.createElement("span");
+  text.textContent = message;
+  snackbar.appendChild(text);
+
   if (withUndo) {
-    const undoBtn = document.createElement("button");
-    undoBtn.textContent = "Geri Al";
-    undoBtn.className = "snackbar-undo";
-    undoBtn.addEventListener("click", undoDelete);
-    snackbar.appendChild(undoBtn);
+    const undoButton = document.createElement("button");
+    undoButton.type = "button";
+    undoButton.className = "snackbar-undo";
+    undoButton.textContent = "Geri Al";
+    undoButton.addEventListener("click", undoDelete);
+    snackbar.appendChild(undoButton);
   }
+
   snackbar.classList.add("show");
   clearTimeout(undoTimeoutId);
   undoTimeoutId = setTimeout(() => {
@@ -314,7 +625,104 @@ function showSnackbar(message, withUndo = false) {
 }
 
 function hideSnackbar() {
-  if (!snackbar) return;
-  snackbar.classList.remove("show");
+  snackbar?.classList.remove("show");
 }
+
+function updateConnectionStatus() {
+  if (!offlineBanner) return;
+  offlineBanner.hidden = navigator.onLine;
+}
+
+function syncTasksFromOtherTab(event) {
+  if (event.storageArea !== localStorage) return;
+  if (event.key !== STORAGE_KEY && event.key !== LEGACY_STORAGE_KEY && event.key !== null) return;
+
+  tasks = loadTasks();
+  if (editingTaskId) closeEditModal();
+  renderTasks();
+  showSnackbar("Başka sekmedeki değişiklikler eşitlendi.");
+}
+
+async function requestPersistentStorage() {
+  if (storagePersistenceRequested || !navigator.storage?.persist) return;
+  storagePersistenceRequested = true;
+
+  try {
+    const isPersistent = await navigator.storage.persisted?.();
+    if (!isPersistent) await navigator.storage.persist();
+  } catch (error) {
+    console.warn("Kalıcı depolama isteği tamamlanamadı:", error);
+  }
+}
+
+function handleInstallPrompt(event) {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  if (installBtn) installBtn.hidden = false;
+}
+
+async function installApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  if (installBtn) installBtn.hidden = true;
+}
+
+function showStandaloneLaunchScreen() {
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (!isStandalone || !launchScreen) return;
+
+  launchScreen.hidden = false;
+  requestAnimationFrame(() => launchScreen.classList.add("show"));
+  setTimeout(() => {
+    launchScreen.classList.remove("show");
+    setTimeout(() => { launchScreen.hidden = true; }, 280);
+  }, 700);
+}
+
+function watchForServiceWorkerUpdates(registration) {
+  serviceWorkerRegistration = registration;
+
+  if (registration.waiting && navigator.serviceWorker.controller && updateBanner) {
+    updateBanner.hidden = false;
+  }
+
+  registration.addEventListener("updatefound", () => {
+    const installingWorker = registration.installing;
+    if (!installingWorker) return;
+
+    installingWorker.addEventListener("statechange", () => {
+      if (installingWorker.state === "installed" && navigator.serviceWorker.controller && updateBanner) {
+        updateBanner.hidden = false;
+      }
+    });
+  });
+}
+
+function applyServiceWorkerUpdate() {
+  const waitingWorker = serviceWorkerRegistration?.waiting;
+  if (!waitingWorker) return;
+  waitingWorker.postMessage({ type: "SKIP_WAITING" });
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    window.location.reload();
+  });
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./service-worker.js")
+      .then(watchForServiceWorkerUpdates)
+      .catch((error) => {
+        console.warn("Service worker kaydı başarısız:", error);
+      });
+  });
+}
+
 renderTasks();
+updateConnectionStatus();
+showStandaloneLaunchScreen();

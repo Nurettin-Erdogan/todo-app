@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Görev Listesi ikonu">
+  <defs>
+    <linearGradient id="g" x1="24" y1="20" x2="168" y2="172" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6ea8fe" />
+      <stop offset="1" stop-color="#35d07f" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="192" height="192" rx="40" fill="#07111f" />
+  <rect x="18" y="18" width="156" height="156" rx="34" fill="url(#g)" opacity="0.18" />
+  <rect x="42" y="46" width="108" height="100" rx="24" fill="none" stroke="url(#g)" stroke-width="10" />
+  <path d="M62 97l16 16 30-34" fill="none" stroke="#ecf2ff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M108 86h24" fill="none" stroke="#ecf2ff" stroke-width="10" stroke-linecap="round" />
+  <path d="M108 112h24" fill="none" stroke="#ecf2ff" stroke-width="10" stroke-linecap="round" opacity="0.82" />
+</svg>

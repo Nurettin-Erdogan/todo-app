@@ -1,69 +1,79 @@
-# To-Do List Uygulaması
+# Görev Listesi
 
-Basit, kullanıcı dostu bir To-Do (görev listesi) uygulaması.
+Görev ekleme, önceliklendirme, tarih belirleme, arama, filtreleme ve sıralama özellikleri sunan kurulabilir bir PWA görev yöneticisidir. Herhangi bir framework veya harici paket gerektirmez.
 
-## Programın Özellikleri
+## Özellikler
 
-- Kullanıcının yeni görev eklemesine olanak sağlar.
-- Eklenen görevleri liste halinde görüntüler.
-- Görevlerin tamamlandı olarak işaretlenmesini sağlar.
-- İstenilen görevlerin silinmesine imkân tanır.
-- Enter tuşu desteği ile hızlı görev ekleme sunar.
-- Basit, anlaşılır ve kullanıcı dostu bir arayüze sahiptir.
-- Tamamlanan görevleri görsel olarak farklı şekilde gösterir.
-- Tarayıcı üzerinde localStorage kullanılarak görevler kalıcı hale getirilir.
+- Görev ekleme, düzenleme, tamamlama ve silme
+- Silinen görevleri 5 saniye içinde geri alma
+- Düşük, orta ve yüksek öncelik seçenekleri
+- Son tarih, bugün, yarın ve gecikme göstergeleri
+- Tümü, aktif ve tamamlanan görev filtreleri
+- Anlık görev araması
+- Masaüstünde sürükle-bırak, mobilde yukarı/aşağı düğmeleriyle sıralama
+- Toplam, devam eden ve tamamlanan görev istatistikleri
+- Tamamlanma ilerleme çubuğu
+- Tarayıcıdaki `localStorage` ile kalıcı veri saklama
+- Birden fazla sekme arasında otomatik veri eşitleme
+- PWA kurulumu ve çevrimdışı açılış desteği
+- Yeni sürüm hazır olduğunda güvenli güncelleme bildirimi
+- Klavye ve ekran okuyucu desteği
 
-## Teknik Özellikler
+## Bu Bilgisayarda Çalıştırma
 
-- HTML ile sayfa yapısı oluşturuldu.
-- CSS ile kullanıcı arayüzü tasarlandı.
-- JavaScript ile görev ekleme, silme ve tamamlama işlemleri geliştirildi.
-- DOM manipülasyonu kullanılarak dinamik görev listesi oluşturuldu.
-- Kullanıcı etkileşimleri buton ve klavye olayları ile yönetildi.
-- localStorage kullanılarak görevler tarayıcıda saklanır.
+En kolay yöntem:
 
-## Çalıştırma
+1. `uygulamayi-baslat.bat` dosyasına çift tıklayın.
+2. Komut penceresini açık bırakın.
+3. Uygulama `http://localhost:5500` adresinde açılır.
+4. Kapatmak için komut penceresinde `Ctrl + C` tuşlarına basın.
 
-1. Bu klasörü bir web sunucusunda ya da doğrudan tarayıcıda açın.
-2. `index.html` dosyasını açın.
+Alternatif olarak VS Code içinde:
 
-## Geliştirme Notları
+1. Live Server eklentisini kurun.
+2. `index.html` dosyasına sağ tıklayın.
+3. **Open with Live Server** seçeneğini seçin.
 
-- Görevler `localStorage` ile saklanır; tarayıcıyı kapatıp açsanız bile korunur.
-- İleri: Görevlerin sıralanması, etiket/durum ekleme ve filtreleme eklenebilir.
+> `index.html` dosyasını doğrudan açmak temel özellikleri çalıştırır; PWA ve çevrimdışı kullanım için yerel sunucu gerekir.
 
-## Yeni Eklenen Özellikler
+## Nasıl Kullanılır?
 
-- Görev düzenleme: Eklenmiş görevleri düzenleyebilirsiniz ("Düzenle" butonu veya çift tık).
-- Filtreleme: Tümü / Aktif / Tamamlanan filtreleri ile listeyi filtreleyebilirsiniz.
-- Geri Al (Undo): Bir görevi sildiğinizde kısa bir süre geri alabilirsiniz ("Geri Al" butonu çıkar).
-- Responsive: Mobil ekranlarda arayüz tek sütuna dönüşür, tuşlar dokunmatik için uygun boyuta gelir.
+1. Üstteki forma görev metnini yazın.
+2. İsterseniz son tarih ve öncelik seçin.
+3. **Görev Ekle** düğmesine basın.
+4. Soldaki kutuyla görevi tamamlandı olarak işaretleyin.
+5. **Düzenle** düğmesiyle metni, tarihi veya önceliği değiştirin.
+6. Masaüstünde görevleri sürükleyin; telefonda ok düğmelerini kullanın.
+7. Arama alanı ve filtrelerle istediğiniz görevleri bulun.
+8. Silme işleminden sonra çıkan **Geri Al** düğmesiyle görevi kurtarın.
 
-## Nasıl Kullanılır
+## Telefona veya Bilgisayara Kurma
 
-1. Projeyi açmak için `index.html` dosyasını tarayıcıda açın veya bir yerel sunucu başlatın.
-2. Yeni görev yazın ve `Enter` veya `Ekle` butonuna basın.
-3. Bir görevi düzenlemek için `Düzenle` butonuna basın veya görev metnine çift tıklayın.
-4. Görevi silince kısa süre içinde çıkan `Geri Al` butonu ile işlemi geri alabilirsiniz.
+1. Projeyi GitHub Pages gibi HTTPS kullanan bir serviste yayınlayın.
+2. Yayınlanan bağlantıyı telefonda açın.
+3. Android Chrome'da **Uygulamayı yükle**, iPhone Safari'de **Ana Ekrana Ekle** seçeneğini kullanın.
+4. Kurulumdan sonra Görev Listesi bağımsız bir uygulama penceresinde açılır.
 
-### Yeni özellikler
+## Dosya Yapısı
 
-- Göreve son tarih ekleme: Görev eklerken tarih seçebilirsiniz.
-- Göreve öncelik atama: Düşük / Orta / Yüksek seçenekleri mevcuttur.
-- Sürükle-bırak ile görev sıralama: Görevleri istediğiniz sıraya sürükleyin.
-- Dışa aktar / İçe aktar: Görevleri JSON olarak dışa aktarabilir veya içe aktarabilirsiniz.
+```text
+todo-app/
+|-- index.html              Sayfa yapısı
+|-- style.css               Tasarım ve responsive kurallar
+|-- script.js               Görevler ve kullanıcı etkileşimleri
+|-- server.js               Paketsiz yerel geliştirme sunucusu
+|-- uygulamayi-baslat.bat   Windows hızlı başlatıcısı
+|-- manifest.webmanifest    PWA bilgileri
+|-- service-worker.js       Çevrimdışı önbellek yönetimi
+|-- icon-192.svg/png        Küçük uygulama ikonları
+|-- icon-512.svg/png        Büyük uygulama ikonları
+`-- README.md               Proje dokümantasyonu
+```
 
-Bu özellikler tarayıcıdaki `localStorage` içinde saklanır.
+## Veri Saklama
 
-### Eklenen İleri Özellikler
+Görevler sunucuya gönderilmez. Veriler kullanılan tarayıcının `localStorage` alanında projeye özel bir anahtarla saklanır. Eski `tasks` verileri ilk açılışta otomatik taşınır. Tarayıcı verileri temizlenirse görevler de silinir.
 
-- Etiketler: Görevlere etiket ekleyebilir ve etiketlere göre filtreleyebilirsiniz. Etiketleri eklerken virgülle ayırın.
-- Filtre Kaydetme: Sık kullandığınız filtre kombinasyonlarını isim verip kaydedebilir, sonra tek tıkla uygulayabilirsiniz.
-- Paylaşım: Mevcut görev listesi ve filtre ayarlarını paylaşmak için bir paylaşım linki oluşturabilir ve kopyalayabilirsiniz. Paylaşılan linki açıp onaylarsanız görevler içe aktarılır.
+## Geliştirme Notu
 
-## Sürüm Notu
-- Bu proje küçük, tek dosya bir uygulamadır ve geliştirmeye açıktır. Daha gelişmiş senkronizasyon için sunucu tarafı veya kullanıcı hesabı tabanlı depolama eklenebilir.
-
-## Notlar
-- Filtreler üst kısımdaki düğmelerle değiştirilebilir.
-- `localStorage` verisini temizlemek isterseniz tarayıcı geliştirici araçlarından silinebilir.
+Bu proje saf HTML, CSS ve JavaScript kullanır. Service worker eski dosyaları gösterirse uygulamada beliren **Şimdi Yenile** düğmesini kullanın. Gerekirse tarayıcı geliştirici araçlarından service worker kaydını kaldırıp sayfayı yenileyin.

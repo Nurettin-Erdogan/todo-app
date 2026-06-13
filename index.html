@@ -3,61 +3,183 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>To-Do List</title>
+  <meta name="description" content="Görevlerini öncelik, tarih ve durum bilgisiyle planlayabileceğin hızlı bir görev yöneticisi." />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Görev Listesi</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="launchScreen" class="launch-screen" aria-hidden="true" hidden>
+    <div class="launch-card">
+      <div class="launch-mark" aria-hidden="true">✓</div>
+      <h1>Görevler</h1>
+      <p>Günün planı hazırlanıyor</p>
+      <div class="launch-spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div id="offlineBanner" class="offline-banner" role="status" aria-live="polite" hidden>
+    Çevrimdışısın. Değişikliklerin bu cihazda kaydedilmeye devam edecek.
+  </div>
+
+  <div id="updateBanner" class="update-banner" role="status" aria-live="polite" hidden>
+    <span>Görev Listesi'nin yeni sürümü hazır.</span>
+    <button id="refreshAppBtn" type="button">Şimdi Yenile</button>
+  </div>
+
   <div class="container">
     <header class="header">
-      <div class="header-left">
-        <h1>To-Do List</h1>
-        <p class="subtitle">Basit ve kullanıcı dostu görev yöneticisi</p>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">✓</div>
+        <div class="header-left">
+          <h1>Görev Listesi</h1>
+          <p class="subtitle">Görevlerini düzenle, gününü planla.</p>
+        </div>
       </div>
+      <button id="installBtn" class="install-btn" type="button" hidden>Uygulamayı Yükle</button>
     </header>
 
     <main class="app">
-      <section class="todo-app">
-        <div class="input-area">
-          <input type="text" id="taskInput" placeholder="Yeni görev yazın ve Enter'a basın..." aria-label="Yeni görev" />
-          <input type="date" id="taskDate" aria-label="Son tarih" />
-          
-          <select id="taskPriority" aria-label="Öncelik">
-            <option value="low">Düşük</option>
-            <option value="medium" selected>Orta</option>
-            <option value="high">Yüksek</option>
-          </select>
-          <button id="addBtn" aria-label="Görev ekle">Ekle</button>
-          
-        </div>
-
-        <div class="controls">
-          <div class="stats"><span id="remainingCount">0</span> görev kaldı</div>
-
-          <div class="filters" role="tablist" aria-label="Filtreler">
-            <button class="filter-btn active" id="filterAll">Tümü</button>
-            <button class="filter-btn" id="filterActive">Aktif</button>
-            <button class="filter-btn" id="filterCompleted">Tamamlanan</button>
+      <section class="summary-grid" aria-label="Görev özeti">
+        <article class="summary-card">
+          <div>
+            <p class="summary-label">Toplam</p>
+            <p class="summary-value" id="totalCount">0</p>
           </div>
-
-          
-
-          <div class="actions">
-            <button id="clearCompletedBtn">Tamamlananları Temizle</button>
+          <span class="summary-icon" aria-hidden="true">●</span>
+        </article>
+        <article class="summary-card summary-card-active">
+          <div>
+            <p class="summary-label">Devam Eden</p>
+            <p class="summary-value" id="activeCount">0</p>
           </div>
-        </div>
-
-        <ul id="taskList" class="task-list" aria-live="polite"></ul>
+          <span class="summary-icon" aria-hidden="true">↗</span>
+        </article>
+        <article class="summary-card summary-card-completed">
+          <div>
+            <p class="summary-label">Tamamlanan</p>
+            <p class="summary-value" id="completedCount">0</p>
+          </div>
+          <span class="summary-icon" aria-hidden="true">✓</span>
+        </article>
       </section>
 
-      <!-- About section removed per user request -->
+      <section class="progress-card" aria-labelledby="progressTitle">
+        <div class="progress-copy">
+          <div>
+            <p class="eyebrow">Günlük İlerleme</p>
+            <h2 id="progressTitle"><span id="completionRate">%0</span> tamamlandı</h2>
+          </div>
+          <p id="progressMessage" class="progress-message">İlk görevini ekleyerek başlayabilirsin.</p>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="Tamamlanma oranı" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="progressBar"></span>
+        </div>
+      </section>
+
+      <section class="todo-app" aria-labelledby="taskSectionTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Görev Merkezi</p>
+            <h2 id="taskSectionTitle">Sıradaki adımlar</h2>
+          </div>
+          <p class="section-hint">Masaüstünde sürükle, mobilde oklarla sırala.</p>
+        </div>
+
+        <form id="taskForm" class="input-area">
+          <div class="field field-task">
+            <label for="taskInput">Yeni görev</label>
+            <input type="text" id="taskInput" maxlength="180" autocomplete="off" placeholder="Örn. Sunum taslağını tamamla" required />
+          </div>
+          <div class="field">
+            <label for="taskDate">Son tarih</label>
+            <input type="date" id="taskDate" />
+          </div>
+          <div class="field">
+            <label for="taskPriority">Öncelik</label>
+            <select id="taskPriority">
+              <option value="low">Düşük</option>
+              <option value="medium" selected>Orta</option>
+              <option value="high">Yüksek</option>
+            </select>
+          </div>
+          <button id="addBtn" class="add-btn" type="submit"><span aria-hidden="true">+</span> Görev Ekle</button>
+        </form>
+
+        <div class="controls">
+          <label class="search-box" for="searchInput">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" autocomplete="off" placeholder="Görevlerde ara" />
+          </label>
+
+          <div class="filters" role="group" aria-label="Görev filtreleri">
+            <button class="filter-btn active" id="filterAll" type="button" aria-pressed="true">Tümü</button>
+            <button class="filter-btn" id="filterActive" type="button" aria-pressed="false">Aktif</button>
+            <button class="filter-btn" id="filterCompleted" type="button" aria-pressed="false">Tamamlanan</button>
+          </div>
+
+          <button id="clearCompletedBtn" class="clear-btn" type="button" disabled>Temizle</button>
+        </div>
+
+        <div class="list-meta">
+          <p><strong id="remainingCount">0</strong> görev kaldı</p>
+          <p id="resultCount" aria-live="polite"></p>
+        </div>
+
+        <ul id="taskList" class="task-list" aria-label="Görevler"></ul>
+      </section>
     </main>
 
     <footer class="footer">
-      <small>To-Do List — Açık kaynak, basit ve kullanışlı.</small>
+      <small>Verilerin yalnızca bu tarayıcıda saklanır.</small>
     </footer>
   </div>
 
-    <div id="snackbar" class="snackbar" aria-live="polite"></div>
+  <div id="editModal" class="edit-modal" aria-hidden="true" hidden>
+    <div class="edit-modal-panel" role="dialog" aria-modal="true" aria-labelledby="editModalTitle" aria-describedby="editModalSubtitle">
+      <div class="edit-modal-head">
+        <div>
+          <p class="eyebrow">Görev Ayrıntıları</p>
+          <h2 id="editModalTitle">Görevi Düzenle</h2>
+          <p id="editModalSubtitle" class="edit-modal-subtitle"></p>
+        </div>
+        <button id="editModalClose" class="edit-modal-close" type="button" aria-label="Düzenleme penceresini kapat">×</button>
+      </div>
+
+      <form id="editTaskForm" class="edit-modal-form">
+        <label for="editTaskText">Görev Metni</label>
+        <input type="text" id="editTaskText" required maxlength="180" />
+
+        <div class="modal-fields">
+          <div class="field">
+            <label for="editTaskDate">Son Tarih</label>
+            <input type="date" id="editTaskDate" />
+          </div>
+          <div class="field">
+            <label for="editTaskPriority">Öncelik</label>
+            <select id="editTaskPriority">
+              <option value="low">Düşük</option>
+              <option value="medium">Orta</option>
+              <option value="high">Yüksek</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="edit-modal-actions">
+          <button type="button" id="editTaskCancel" class="ghost-btn">İptal</button>
+          <button type="submit" class="primary-btn">Değişiklikleri Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>
