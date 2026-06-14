@@ -30,6 +30,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 38px 16px;
   color: var(--text);
   background:
@@ -438,7 +439,7 @@ select option {
 
 .task-list {
   display: grid;
-  gap: 10px;
+  gap: 9px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -447,15 +448,19 @@ select option {
 .task-item {
   position: relative;
   display: grid;
-  grid-template-columns: 18px 38px minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 14px 15px 14px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.066);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+  min-height: 70px;
+  padding: 11px 14px 11px 13px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 16px;
+  background:
+    linear-gradient(110deg, rgba(112, 169, 255, 0.055), transparent 42%),
+    rgba(255, 255, 255, 0.062);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.13);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
 
 .task-item::before {
@@ -478,8 +483,11 @@ select option {
 }
 
 .task-item:hover {
-  border-color: rgba(112, 169, 255, 0.26);
-  background: rgba(255, 255, 255, 0.087);
+  border-color: rgba(112, 169, 255, 0.35);
+  background:
+    linear-gradient(110deg, rgba(112, 169, 255, 0.09), transparent 42%),
+    rgba(255, 255, 255, 0.08);
+  box-shadow: 0 15px 34px rgba(0, 0, 0, 0.17);
   transform: translateY(-1px);
 }
 
@@ -497,33 +505,41 @@ select option {
 
 .task-check {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 10px;
+  height: 10px;
   place-items: center;
   padding: 0;
-  border: 2px solid rgba(237, 244, 255, 0.28);
-  border-radius: 12px;
+  border: 1px solid rgba(237, 244, 255, 0.45);
+  border-radius: 3px;
   color: #07111f;
-  background: transparent;
-  font-weight: 900;
+  background: rgba(7, 17, 31, 0.24);
+  font-size: 8px;
+  line-height: 1;
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.task-check:not([aria-pressed="true"]):hover {
+  border-color: rgba(112, 169, 255, 0.9);
+  background: rgba(112, 169, 255, 0.1);
 }
 
 .task-check[aria-pressed="true"] {
   border-color: transparent;
   background: linear-gradient(135deg, var(--success), #65e6a1);
+  box-shadow: 0 3px 8px rgba(53, 208, 127, 0.28);
 }
 
 .task-main {
   display: grid;
   min-width: 0;
-  gap: 7px;
+  gap: 5px;
 }
 
 .task-text {
   margin: 0;
   color: var(--text);
   font-size: 1rem;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -537,18 +553,21 @@ select option {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
 }
 
 .badge,
 .due {
   display: inline-flex;
-  min-height: 24px;
+  min-height: 22px;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .badge {
@@ -585,11 +604,14 @@ select option {
 .task-actions {
   justify-content: flex-end;
   min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .task-actions button {
   min-height: 34px;
-  padding: 0 10px;
+  padding: 0 11px;
+  border: 1px solid transparent;
   font-size: 0.78rem;
   font-weight: 750;
 }
@@ -603,11 +625,13 @@ select option {
 .task-actions .edit-btn {
   color: #ffd58d;
   background: rgba(247, 184, 75, 0.11);
+  border-color: rgba(247, 184, 75, 0.14);
 }
 
 .task-actions .delete-btn {
   color: #ffaaaa;
   background: rgba(255, 112, 112, 0.11);
+  border-color: rgba(255, 112, 112, 0.14);
 }
 
 .task-item.dragging {
@@ -919,18 +943,25 @@ select:focus-visible {
   }
 
   .task-item {
-    grid-template-columns: 16px 38px minmax(0, 1fr);
+    grid-template-columns: 10px minmax(0, 1fr);
   }
 
   .task-actions {
-    grid-column: 3;
+    grid-column: 2;
     justify-content: flex-start;
+    padding-top: 3px;
+    padding-left: 0;
+    border-left: 0;
   }
 }
 
 @media (max-width: 680px) {
   body {
-    padding: 14px 10px;
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
   }
 
   .container {
@@ -940,6 +971,7 @@ select:focus-visible {
 
   .header {
     align-items: flex-start;
+    flex-direction: column;
   }
 
   .brand-mark {
@@ -953,7 +985,9 @@ select:focus-visible {
   }
 
   .install-btn {
+    align-self: flex-start;
     min-height: 38px;
+    max-width: 100%;
     padding: 0 12px;
     font-size: 0.78rem;
   }
@@ -1019,9 +1053,10 @@ select:focus-visible {
   }
 
   .task-item {
-    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-columns: 10px minmax(0, 1fr);
     gap: 10px;
-    padding: 14px;
+    min-height: 0;
+    padding: 12px;
   }
 
   .drag-handle {
@@ -1029,13 +1064,18 @@ select:focus-visible {
   }
 
   .task-check {
-    width: 34px;
-    height: 34px;
+    width: 10px;
+    height: 10px;
   }
 
   .task-actions {
     grid-column: 2;
     flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .task-actions button {
+    min-height: 36px;
   }
 
   .reorder-actions {

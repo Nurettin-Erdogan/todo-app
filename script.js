@@ -51,6 +51,7 @@ let deferredInstallPrompt = null;
 let serviceWorkerRegistration = null;
 let storagePersistenceRequested = false;
 let reloadingForUpdate = false;
+let updateCheckTimer = null;
 
 taskForm?.addEventListener("submit", handleAddTask);
 searchInput?.addEventListener("input", () => {
@@ -76,7 +77,7 @@ window.addEventListener("storage", syncTasksFromOtherTab);
 window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 window.addEventListener("appinstalled", () => {
   deferredInstallPrompt = null;
-  if (installBtn) installBtn.hidden = true;
+  updateInstallButton();
   showSnackbar("Görev Listesi cihazına yüklendi.");
 });
 
@@ -658,20 +659,41 @@ async function requestPersistentStorage() {
 function handleInstallPrompt(event) {
   event.preventDefault();
   deferredInstallPrompt = event;
-  if (installBtn) installBtn.hidden = false;
+  updateInstallButton();
 }
 
 async function installApp() {
-  if (!deferredInstallPrompt) return;
+  if (!deferredInstallPrompt) {
+    if (isIosDevice()) {
+      showSnackbar("Paylaş düğmesine, ardından Ana Ekrana Ekle'ye dokun.");
+    }
+    return;
+  }
+
   deferredInstallPrompt.prompt();
   await deferredInstallPrompt.userChoice;
   deferredInstallPrompt = null;
-  if (installBtn) installBtn.hidden = true;
+  updateInstallButton();
+}
+
+function isIosDevice() {
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneMode() {
+  return window.matchMedia("(display-mode: standalone)").matches || Boolean(navigator.standalone);
+}
+
+function updateInstallButton() {
+  if (!installBtn) return;
+  const showIosHint = isIosDevice() && !isStandaloneMode() && !deferredInstallPrompt;
+  installBtn.hidden = !deferredInstallPrompt && !showIosHint;
+  installBtn.textContent = showIosHint ? "Ana Ekrana Ekle" : "Uygulamayı Yükle";
 }
 
 function showStandaloneLaunchScreen() {
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
-  if (!isStandalone || !launchScreen) return;
+  if (!isStandaloneMode() || !launchScreen) return;
 
   launchScreen.hidden = false;
   requestAnimationFrame(() => launchScreen.classList.add("show"));
@@ -684,9 +706,7 @@ function showStandaloneLaunchScreen() {
 function watchForServiceWorkerUpdates(registration) {
   serviceWorkerRegistration = registration;
 
-  if (registration.waiting && navigator.serviceWorker.controller && updateBanner) {
-    updateBanner.hidden = false;
-  }
+  showUpdateBannerIfReady();
 
   registration.addEventListener("updatefound", () => {
     const installingWorker = registration.installing;
@@ -698,6 +718,27 @@ function watchForServiceWorkerUpdates(registration) {
       }
     });
   });
+
+  checkForAppUpdate();
+  clearInterval(updateCheckTimer);
+  updateCheckTimer = setInterval(checkForAppUpdate, 15 * 60 * 1000);
+}
+
+function showUpdateBannerIfReady() {
+  if (serviceWorkerRegistration?.waiting && navigator.serviceWorker.controller && updateBanner) {
+    updateBanner.hidden = false;
+  }
+}
+
+async function checkForAppUpdate() {
+  if (!serviceWorkerRegistration || !navigator.onLine) return;
+
+  try {
+    await serviceWorkerRegistration.update();
+    showUpdateBannerIfReady();
+  } catch (error) {
+    console.warn("Uygulama güncellemesi kontrol edilemedi:", error);
+  }
 }
 
 function applyServiceWorkerUpdate() {
@@ -715,14 +756,21 @@ if ("serviceWorker" in navigator) {
 
   window.addEventListener("load", () => {
     navigator.serviceWorker
-      .register("./service-worker.js")
+      .register("./service-worker.js", { updateViaCache: "none" })
       .then(watchForServiceWorkerUpdates)
       .catch((error) => {
         console.warn("Service worker kaydı başarısız:", error);
       });
   });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForAppUpdate();
+  });
+
+  window.addEventListener("online", checkForAppUpdate);
 }
 
 renderTasks();
 updateConnectionStatus();
+updateInstallButton();
 showStandaloneLaunchScreen();

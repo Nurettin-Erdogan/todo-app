@@ -10,7 +10,7 @@ Görev ekleme, önceliklendirme, tarih belirleme, arama, filtreleme ve sıralama
 - Son tarih, bugün, yarın ve gecikme göstergeleri
 - Tümü, aktif ve tamamlanan görev filtreleri
 - Anlık görev araması
-- Masaüstünde sürükle-bırak, mobilde yukarı/aşağı düğmeleriyle sıralama
+- Masaüstünde sürükle-bırak ile sıralama
 - Toplam, devam eden ve tamamlanan görev istatistikleri
 - Tamamlanma ilerleme çubuğu
 - Tarayıcıdaki `localStorage` ile kalıcı veri saklama
@@ -43,7 +43,7 @@ Alternatif olarak VS Code içinde:
 3. **Görev Ekle** düğmesine basın.
 4. Soldaki kutuyla görevi tamamlandı olarak işaretleyin.
 5. **Düzenle** düğmesiyle metni, tarihi veya önceliği değiştirin.
-6. Masaüstünde görevleri sürükleyin; telefonda ok düğmelerini kullanın.
+6. Masaüstünde görevleri sürükleyerek sıralayın.
 7. Arama alanı ve filtrelerle istediğiniz görevleri bulun.
 8. Silme işleminden sonra çıkan **Geri Al** düğmesiyle görevi kurtarın.
 

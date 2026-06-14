@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Görevlerini öncelik, tarih ve durum bilgisiyle planlayabileceğin hızlı bir görev yöneticisi." />
   <meta name="theme-color" content="#07111f" />
   <meta name="color-scheme" content="dark" />
@@ -89,13 +89,13 @@
             <p class="eyebrow">Görev Merkezi</p>
             <h2 id="taskSectionTitle">Sıradaki adımlar</h2>
           </div>
-          <p class="section-hint">Masaüstünde sürükle, mobilde oklarla sırala.</p>
+          <p class="section-hint">Masaüstünde görevleri sürükleyerek sırala.</p>
         </div>
 
         <form id="taskForm" class="input-area">
           <div class="field field-task">
             <label for="taskInput">Yeni görev</label>
-            <input type="text" id="taskInput" maxlength="180" autocomplete="off" placeholder="Örn. Sunum taslağını tamamla" required />
+            <input type="text" id="taskInput" maxlength="180" autocomplete="off" enterkeyhint="done" placeholder="Örn. Sunum taslağını tamamla" required />
           </div>
           <div class="field">
             <label for="taskDate">Son tarih</label>
@@ -115,7 +115,7 @@
         <div class="controls">
           <label class="search-box" for="searchInput">
             <span aria-hidden="true">⌕</span>
-            <input id="searchInput" type="search" autocomplete="off" placeholder="Görevlerde ara" />
+            <input id="searchInput" type="search" autocomplete="off" aria-label="Görevlerde ara" placeholder="Görevlerde ara" />
           </label>
 
           <div class="filters" role="group" aria-label="Görev filtreleri">
