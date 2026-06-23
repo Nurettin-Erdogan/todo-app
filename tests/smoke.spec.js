@@ -1,18 +1,36 @@
 const { test, expect } = require("@playwright/test");
 
 test("a task can be added, completed, and deleted", async ({ page }) => {
+  const taskName = "Playwright smoke görevi";
+
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Sıradaki adımlar" })).toBeVisible();
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  await page.reload();
 
-  await page.getByLabel("Yeni görev").fill("Playwright smoke görevi");
-  await page.getByRole("button", { name: "Görev Ekle" }).click();
+  await expect(page.getByRole("heading", { name: /Sıradaki adımlar/i })).toBeVisible();
+  await expect(page.locator("#taskInput")).toBeVisible();
 
-  const task = page.locator(".task-item", { hasText: "Playwright smoke görevi" });
+  await page.locator("#taskInput").fill(taskName);
+  await page.locator("#addBtn").click();
+
+  await expect
+    .poll(async () => {
+      return page.evaluate((text) => {
+        const tasks = JSON.parse(localStorage.getItem("gorev-listesi.tasks.v1") || "[]");
+        return tasks.some((task) => task.text === text);
+      }, taskName);
+    })
+    .toBe(true);
+
+  const task = page.locator("#taskList .task-item", { hasText: taskName });
   await expect(task).toBeVisible();
 
   await task.locator(".task-check").click();
   await expect(task).toHaveClass(/is-completed/);
 
   await task.locator(".delete-btn").click();
-  await expect(task).toHaveCount(0);
+  await expect(page.locator("#taskList .task-item", { hasText: taskName })).toHaveCount(0);
 });
