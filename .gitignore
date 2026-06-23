@@ -32,6 +32,8 @@ out/
 # Caches
 .cache/
 coverage/
+test-results/
+playwright-report/
 
 # Misc
 *.sqlite

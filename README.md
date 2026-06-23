@@ -1,8 +1,28 @@
 # Görev Listesi
 
-Görev ekleme, önceliklendirme, tarih belirleme, arama, filtreleme ve sıralama özellikleri sunan kurulabilir bir PWA görev yöneticisidir. Herhangi bir framework veya harici paket gerektirmez.
+<p align="center">
+  <img src="docs/preview.svg" alt="Görev Listesi uygulama önizlemesi" width="760">
+</p>
 
-## Özellikler
+Öncelik, son tarih, arama ve sürükle-bırak sıralamayı tek bir sakin akışta birleştiren; cihazda çalışan, kurulabilir bir PWA görev yöneticisi.
+
+<p align="center">
+  <a href="https://nurettin-erdogan.github.io/todo-app/"><strong>Canlı demoyu aç →</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#testler">Testler</a>
+  &nbsp;·&nbsp;
+  <a href="#pwa-ve-veri">PWA ve veri</a>
+</p>
+
+## Teknolojiler
+
+- Vanilla JavaScript, HTML ve CSS
+- `localStorage` tabanlı cihaz içi kalıcılık
+- Service Worker ve Web App Manifest
+- Node.js ile paketsiz yerel geliştirme sunucusu
+- Playwright smoke testleri ve GitHub Actions CI
+
+## Öne çıkan özellikler
 
 - Görev ekleme, düzenleme, tamamlama ve silme
 - Silinen görevleri 5 saniye içinde geri alma
@@ -19,7 +39,7 @@ Görev ekleme, önceliklendirme, tarih belirleme, arama, filtreleme ve sıralama
 - Yeni sürüm hazır olduğunda güvenli güncelleme bildirimi
 - Klavye ve ekran okuyucu desteği
 
-## Bu Bilgisayarda Çalıştırma
+## Kurulum ve yerel çalıştırma
 
 En kolay yöntem:
 
@@ -70,10 +90,20 @@ todo-app/
 `-- README.md               Proje dokümantasyonu
 ```
 
-## Veri Saklama
+## PWA ve veri
 
 Görevler sunucuya gönderilmez. Veriler kullanılan tarayıcının `localStorage` alanında projeye özel bir anahtarla saklanır. Eski `tasks` verileri ilk açılışta otomatik taşınır. Tarayıcı verileri temizlenirse görevler de silinir.
 
 ## Geliştirme Notu
 
 Bu proje saf HTML, CSS ve JavaScript kullanır. Service worker eski dosyaları gösterirse uygulamada beliren **Şimdi Yenile** düğmesini kullanın. Gerekirse tarayıcı geliştirici araçlarından service worker kaydını kaldırıp sayfayı yenileyin.
+
+## Testler
+
+```bash
+npm install
+npx playwright install chromium
+npm test
+```
+
+Smoke testi uygulamanın açıldığını, görev eklenebildiğini, tamamlanabildiğini ve silinebildiğini doğrular.
