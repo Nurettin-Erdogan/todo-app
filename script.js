@@ -1,7 +1,8 @@
-const STORAGE_KEY = "gorev-listesi.tasks.v1";
-const LEGACY_STORAGE_KEY = "tasks";
+const STORAGE_KEY = "gorev-listesi.tasks.v2";
+const LEGACY_STORAGE_KEYS = ["gorev-listesi.tasks.v1", "tasks"];
 const VALID_PRIORITIES = ["low", "medium", "high"];
 const PRIORITY_LABELS = { low: "Düşük", medium: "Orta", high: "Yüksek" };
+const TAB_ID = createTaskId();
 
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
@@ -38,11 +39,14 @@ const updateBanner = document.getElementById("updateBanner");
 const refreshAppBtn = document.getElementById("refreshAppBtn");
 const launchScreen = document.getElementById("launchScreen");
 
-let tasks = loadTasks();
+const initialTaskState = loadTasks();
+let tasks = initialTaskState.tasks;
+let taskTombstones = initialTaskState.tombstones;
 let currentFilter = "all";
 let searchQuery = "";
 let lastDeleted = null;
 let undoTimeoutId = null;
+let snackbarHideTimer = null;
 let draggingId = null;
 let editingTaskId = null;
 let modalCloseTimer = null;
@@ -52,6 +56,7 @@ let serviceWorkerRegistration = null;
 let storagePersistenceRequested = false;
 let reloadingForUpdate = false;
 let updateCheckTimer = null;
+let lastMutationTimestamp = 0;
 
 taskForm?.addEventListener("submit", handleAddTask);
 searchInput?.addEventListener("input", () => {
@@ -83,39 +88,153 @@ window.addEventListener("appinstalled", () => {
 
 function loadTasks() {
   try {
-    const currentValue = localStorage.getItem(STORAGE_KEY);
-    const legacyValue = localStorage.getItem(LEGACY_STORAGE_KEY);
-    const storedValue = currentValue || legacyValue;
-    if (!storedValue) return [];
-    const parsed = JSON.parse(storedValue);
-    if (!Array.isArray(parsed)) return [];
-    const normalizedTasks = parsed.map(normalizeTask).filter((task) => task.text);
+    const currentState = parseStoredState(localStorage.getItem(STORAGE_KEY));
+    if (currentState) return currentState;
 
-    if (!currentValue && legacyValue) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedTasks));
-      localStorage.removeItem(LEGACY_STORAGE_KEY);
-    }
+    const legacyValue = LEGACY_STORAGE_KEYS
+      .map((key) => localStorage.getItem(key))
+      .find(Boolean);
+    const legacyState = parseStoredState(legacyValue);
+    if (!legacyState) return createEmptyTaskState();
 
-    return normalizedTasks;
+    localStorage.setItem(STORAGE_KEY, serializeTaskState(legacyState));
+    return legacyState;
   } catch (error) {
     console.warn("Görev verileri okunamadı:", error);
-    return [];
+    return createEmptyTaskState();
   }
 }
 
-function normalizeTask(task = {}) {
+function createEmptyTaskState() {
+  return { tasks: [], tombstones: {} };
+}
+
+function parseStoredState(value) {
+  if (!value) return null;
+
+  const parsed = JSON.parse(value);
+  if (Array.isArray(parsed)) {
+    return { tasks: normalizeTaskList(parsed), tombstones: {} };
+  }
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.tasks)) return null;
+
+  return mergeTaskStates({
+    tasks: normalizeTaskList(parsed.tasks),
+    tombstones: normalizeTombstones(parsed.tombstones),
+  });
+}
+
+function normalizeTaskList(taskList) {
+  const tasksById = new Map();
+
+  taskList.forEach((task, index) => {
+    const normalized = normalizeTask(task, index);
+    if (!normalized.text) return;
+
+    const existing = tasksById.get(String(normalized.id));
+    if (!existing || compareVersions(normalized, existing) > 0) {
+      tasksById.set(String(normalized.id), normalized);
+    }
+  });
+
+  return [...tasksById.values()].sort(compareTaskOrder);
+}
+
+function normalizeTombstones(tombstones) {
+  if (!tombstones || Array.isArray(tombstones) || typeof tombstones !== "object") return {};
+
+  return Object.entries(tombstones).reduce((normalized, [id, value]) => {
+    const isTombstoneObject = value && typeof value === "object" && !Array.isArray(value);
+    const updatedAt = Number(isTombstoneObject ? value.updatedAt : value);
+    if (!Number.isFinite(updatedAt) || updatedAt <= 0) return normalized;
+
+    normalized[String(id)] = {
+      updatedAt: Math.floor(updatedAt),
+      updatedBy: isTombstoneObject && typeof value.updatedBy === "string"
+        ? value.updatedBy
+        : "",
+    };
+    return normalized;
+  }, {});
+}
+
+function normalizeTask(task = {}, index = 0) {
   const priority = VALID_PRIORITIES.includes(task.priority) ? task.priority : "medium";
   const rawDate = String(task.date ?? "");
   const id = ["string", "number"].includes(typeof task.id) && String(task.id).trim()
     ? task.id
     : createTaskId();
+  const order = Number(task.order);
+  const updatedAt = Number(task.updatedAt);
   return {
     id,
     text: String(task.text ?? "").trim().slice(0, 180),
     completed: Boolean(task.completed),
     date: /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && parseLocalDate(rawDate) ? rawDate : "",
     priority,
+    order: Number.isFinite(order) ? order : index,
+    updatedAt: Number.isFinite(updatedAt) && updatedAt >= 0 ? Math.floor(updatedAt) : 0,
+    updatedBy: typeof task.updatedBy === "string" ? task.updatedBy : "",
   };
+}
+
+function compareVersions(left, right) {
+  const timestampDifference = Number(left.updatedAt || 0) - Number(right.updatedAt || 0);
+  if (timestampDifference) return timestampDifference;
+  return String(left.updatedBy || "").localeCompare(String(right.updatedBy || ""));
+}
+
+function compareTaskOrder(left, right) {
+  const orderDifference = left.order - right.order;
+  return orderDifference || String(left.id).localeCompare(String(right.id));
+}
+
+function mergeTaskStates(...states) {
+  const tasksById = new Map();
+  const tombstones = {};
+
+  states.filter(Boolean).forEach((state) => {
+    (state.tasks || []).forEach((task, index) => {
+      const normalized = normalizeTask(task, index);
+      if (!normalized.text) return;
+
+      const existing = tasksById.get(String(normalized.id));
+      if (!existing || compareVersions(normalized, existing) > 0) {
+        tasksById.set(String(normalized.id), normalized);
+      }
+    });
+
+    Object.entries(normalizeTombstones(state.tombstones)).forEach(([id, tombstone]) => {
+      const existing = tombstones[id];
+      if (!existing || compareVersions(tombstone, existing) > 0) tombstones[id] = tombstone;
+    });
+  });
+
+  const mergedTasks = [...tasksById.values()]
+    .filter((task) => {
+      const tombstone = tombstones[String(task.id)];
+      return !tombstone || compareVersions(task, tombstone) > 0;
+    })
+    .sort(compareTaskOrder);
+
+  return { tasks: mergedTasks, tombstones };
+}
+
+function serializeTaskState(state) {
+  return JSON.stringify({ version: 2, tasks: state.tasks, tombstones: state.tombstones });
+}
+
+function createMutationStamp() {
+  lastMutationTimestamp = Math.max(Date.now(), lastMutationTimestamp + 1);
+  return { updatedAt: lastMutationTimestamp, updatedBy: TAB_ID };
+}
+
+function updateTask(task, changes = {}) {
+  return { ...task, ...changes, ...createMutationStamp() };
+}
+
+function getNextTaskOrder() {
+  return tasks.reduce((highestOrder, task) => Math.max(highestOrder, task.order), -1) + 1;
 }
 
 function createTaskId() {
@@ -138,6 +257,8 @@ function handleAddTask(event) {
     text,
     date: taskDate?.value || "",
     priority: taskPriority?.value || "medium",
+    order: getNextTaskOrder(),
+    ...createMutationStamp(),
   }));
 
   saveAndRender();
@@ -149,7 +270,7 @@ function handleAddTask(event) {
 
 function toggleTask(id) {
   tasks = tasks.map((task) => (
-    String(task.id) === String(id) ? { ...task, completed: !task.completed } : task
+    String(task.id) === String(id) ? updateTask(task, { completed: !task.completed }) : task
   ));
   saveAndRender();
   focusTaskControl(id, ".task-check");
@@ -160,7 +281,11 @@ function deleteTask(id) {
   if (index === -1) return;
 
   lastDeleted = { task: tasks[index], index };
-  tasks.splice(index, 1);
+  taskTombstones = {
+    ...taskTombstones,
+    [String(tasks[index].id)]: createMutationStamp(),
+  };
+  tasks = tasks.filter((task) => String(task.id) !== String(id));
   saveAndRender();
   showSnackbar(`“${lastDeleted.task.text}” silindi.`, true);
 }
@@ -176,6 +301,11 @@ function clearCompletedTasks() {
   }
 
   lastDeleted = { tasks: removed };
+  const deletionStamp = createMutationStamp();
+  taskTombstones = removed.reduce((tombstones, { task }) => {
+    tombstones[String(task.id)] = deletionStamp;
+    return tombstones;
+  }, { ...taskTombstones });
   tasks = tasks.filter((task) => !task.completed);
   saveAndRender();
   showSnackbar(`${removed.length} tamamlanmış görev temizlendi.`, true);
@@ -185,11 +315,12 @@ function undoDelete() {
   if (!lastDeleted) return;
 
   if (lastDeleted.tasks) {
-    [...lastDeleted.tasks]
-      .sort((a, b) => a.index - b.index)
-      .forEach(({ task, index }) => tasks.splice(index, 0, task));
+    tasks = [
+      ...tasks,
+      ...lastDeleted.tasks.map(({ task }) => updateTask(task)),
+    ].sort(compareTaskOrder);
   } else {
-    tasks.splice(lastDeleted.index, 0, lastDeleted.task);
+    tasks = [...tasks, updateTask(lastDeleted.task)].sort(compareTaskOrder);
   }
 
   lastDeleted = null;
@@ -199,13 +330,20 @@ function undoDelete() {
 }
 
 function moveTask(id, direction) {
-  const index = tasks.findIndex((task) => String(task.id) === String(id));
+  const orderedTasks = [...tasks].sort(compareTaskOrder);
+  const index = orderedTasks.findIndex((task) => String(task.id) === String(id));
   const nextIndex = index + direction;
-  if (index < 0 || nextIndex < 0 || nextIndex >= tasks.length) return;
+  if (index < 0 || nextIndex < 0 || nextIndex >= orderedTasks.length) return;
 
-  [tasks[index], tasks[nextIndex]] = [tasks[nextIndex], tasks[index]];
+  [orderedTasks[index], orderedTasks[nextIndex]] = [orderedTasks[nextIndex], orderedTasks[index]];
+  updateTaskOrder(orderedTasks);
   saveAndRender();
   focusTaskControl(id, ".move-btn:not(:disabled)");
+}
+
+function updateTaskOrder(orderedTasks) {
+  const mutationStamp = createMutationStamp();
+  tasks = orderedTasks.map((task, index) => ({ ...task, order: index, ...mutationStamp }));
 }
 
 function findTaskElement(id) {
@@ -221,7 +359,11 @@ function focusTaskControl(id, selector) {
 
 function saveAndRender() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    const storedState = parseStoredState(localStorage.getItem(STORAGE_KEY));
+    const mergedState = mergeTaskStates(storedState, { tasks, tombstones: taskTombstones });
+    tasks = mergedState.tasks;
+    taskTombstones = mergedState.tombstones;
+    localStorage.setItem(STORAGE_KEY, serializeTaskState(mergedState));
     requestPersistentStorage();
   } catch (error) {
     console.warn("Görevler kaydedilemedi:", error);
@@ -243,20 +385,22 @@ function getVisibleTasks() {
 
 function renderTasks() {
   if (!taskList) return;
-  taskList.replaceChildren();
 
   const visibleTasks = getVisibleTasks();
   const canReorder = currentFilter === "all" && !searchQuery;
+  const taskIndexes = new Map(tasks.map((task, index) => [String(task.id), index]));
+  const fragment = document.createDocumentFragment();
 
   if (!visibleTasks.length) {
-    taskList.appendChild(createEmptyState());
+    fragment.appendChild(createEmptyState());
   }
 
   visibleTasks.forEach((task) => {
-    const index = tasks.findIndex((item) => String(item.id) === String(task.id));
-    taskList.appendChild(createTaskElement(task, index, canReorder));
+    const index = taskIndexes.get(String(task.id));
+    fragment.appendChild(createTaskElement(task, index, canReorder));
   });
 
+  taskList.replaceChildren(fragment);
   updateDashboard(visibleTasks.length);
   updateFilterUI();
 }
@@ -330,7 +474,9 @@ function createTaskElement(task, index, canReorder) {
   meta.appendChild(badge);
 
   if (task.date) {
-    const dueInfo = getDueInfo(task.date);
+    const dueInfo = task.completed
+      ? { label: formatDate(task.date), className: "" }
+      : getDueInfo(task.date);
     const due = document.createElement("time");
     due.className = `due ${dueInfo.className}`.trim();
     due.textContent = dueInfo.label;
@@ -401,12 +547,14 @@ function addDragEvents(element, taskId) {
     event.preventDefault();
     element.classList.remove("drag-over");
     const sourceId = draggingId || event.dataTransfer.getData("text/plain");
-    const fromIndex = tasks.findIndex((task) => String(task.id) === String(sourceId));
-    const toIndex = tasks.findIndex((task) => String(task.id) === String(taskId));
+    const orderedTasks = [...tasks].sort(compareTaskOrder);
+    const fromIndex = orderedTasks.findIndex((task) => String(task.id) === String(sourceId));
+    const toIndex = orderedTasks.findIndex((task) => String(task.id) === String(taskId));
     if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
 
-    const [movedTask] = tasks.splice(fromIndex, 1);
-    tasks.splice(toIndex, 0, movedTask);
+    const [movedTask] = orderedTasks.splice(fromIndex, 1);
+    orderedTasks.splice(toIndex, 0, movedTask);
+    updateTaskOrder(orderedTasks);
     saveAndRender();
   });
 }
@@ -561,8 +709,7 @@ function submitEditForm(event) {
 
   tasks = tasks.map((task) => (
     String(task.id) === String(editingTaskId)
-      ? normalizeTask({
-        ...task,
+      ? updateTask(task, {
         text: newText,
         date: editTaskDate?.value || "",
         priority: editTaskPriority?.value || "medium",
@@ -602,6 +749,8 @@ function handleGlobalKeydown(event) {
 
 function showSnackbar(message, withUndo = false) {
   if (!snackbar) return;
+  clearTimeout(undoTimeoutId);
+  clearTimeout(snackbarHideTimer);
   snackbar.replaceChildren();
 
   const text = document.createElement("span");
@@ -617,16 +766,24 @@ function showSnackbar(message, withUndo = false) {
     snackbar.appendChild(undoButton);
   }
 
-  snackbar.classList.add("show");
-  clearTimeout(undoTimeoutId);
+  snackbar.hidden = false;
+  snackbar.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => snackbar.classList.add("show"));
   undoTimeoutId = setTimeout(() => {
-    snackbar.classList.remove("show");
     lastDeleted = null;
+    hideSnackbar();
   }, 5000);
 }
 
 function hideSnackbar() {
-  snackbar?.classList.remove("show");
+  if (!snackbar) return;
+  snackbar.classList.remove("show");
+  snackbar.setAttribute("aria-hidden", "true");
+  clearTimeout(snackbarHideTimer);
+  snackbarHideTimer = setTimeout(() => {
+    snackbar.hidden = true;
+    snackbar.replaceChildren();
+  }, 200);
 }
 
 function updateConnectionStatus() {
@@ -636,9 +793,36 @@ function updateConnectionStatus() {
 
 function syncTasksFromOtherTab(event) {
   if (event.storageArea !== localStorage) return;
-  if (event.key !== STORAGE_KEY && event.key !== LEGACY_STORAGE_KEY && event.key !== null) return;
+  if (event.key !== STORAGE_KEY && event.key !== null) return;
 
-  tasks = loadTasks();
+  if (!event.newValue) {
+    tasks = [];
+    taskTombstones = {};
+    if (editingTaskId) closeEditModal();
+    renderTasks();
+    showSnackbar("Başka sekmedeki görev verileri temizlendi.");
+    return;
+  }
+
+  try {
+    const incomingState = parseStoredState(event.newValue);
+    if (!incomingState) return;
+
+    const mergedState = mergeTaskStates(
+      { tasks, tombstones: taskTombstones },
+      incomingState,
+    );
+    const incomingSerialized = serializeTaskState(incomingState);
+    const mergedSerialized = serializeTaskState(mergedState);
+
+    tasks = mergedState.tasks;
+    taskTombstones = mergedState.tombstones;
+    if (mergedSerialized !== incomingSerialized) localStorage.setItem(STORAGE_KEY, mergedSerialized);
+  } catch (error) {
+    console.warn("Başka sekmedeki görevler eşitlenemedi:", error);
+    return;
+  }
+
   if (editingTaskId) closeEditModal();
   renderTasks();
   showSnackbar("Başka sekmedeki değişiklikler eşitlendi.");

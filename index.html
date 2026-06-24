@@ -2,17 +2,19 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Görevlerini öncelik, tarih ve durum bilgisiyle planlayabileceğin hızlı bir görev yöneticisi." />
   <meta name="theme-color" content="#07111f" />
   <meta name="color-scheme" content="dark" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Görevler" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Görev Listesi</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
   <div id="launchScreen" class="launch-screen" aria-hidden="true" hidden>
@@ -179,8 +181,8 @@
     </div>
   </div>
 
-  <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite" aria-hidden="true" hidden></div>
 
-  <script src="script.js?v=10"></script>
+  <script src="script.js?v=13"></script>
 </body>
 </html>

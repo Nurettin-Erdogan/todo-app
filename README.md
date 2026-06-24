@@ -92,7 +92,7 @@ todo-app/
 
 ## PWA ve veri
 
-Görevler sunucuya gönderilmez. Veriler kullanılan tarayıcının `localStorage` alanında projeye özel bir anahtarla saklanır. Eski `tasks` verileri ilk açılışta otomatik taşınır. Tarayıcı verileri temizlenirse görevler de silinir.
+Görevler sunucuya gönderilmez. Veriler kullanılan tarayıcının `localStorage` alanında projeye özel bir anahtarla saklanır. Eski `gorev-listesi.tasks.v1` ve `tasks` kayıtları ilk açılışta otomatik taşınır. Birden fazla sekmede yapılan bağımsız değişiklikler görev bazında birleştirilir. Tarayıcı verileri temizlenirse görevler de silinir.
 
 ## Geliştirme Notu
 
