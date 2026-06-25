@@ -1,5 +1,8 @@
 const STORAGE_KEY = "gorev-listesi.tasks.v2";
 const LEGACY_STORAGE_KEYS = ["gorev-listesi.tasks.v1", "tasks"];
+const REMINDER_STORAGE_KEY = "gorev-listesi.reminders.v1";
+const REMINDER_CHECK_INTERVAL = 15 * 60 * 1000;
+const REMINDER_LOG_RETENTION = 14 * 24 * 60 * 60 * 1000;
 const VALID_PRIORITIES = ["low", "medium", "high"];
 const PRIORITY_LABELS = { low: "Düşük", medium: "Orta", high: "Yüksek" };
 const TAB_ID = createTaskId();
@@ -23,6 +26,9 @@ const clearCompletedBtn = document.getElementById("clearCompletedBtn");
 const filterAllBtn = document.getElementById("filterAll");
 const filterActiveBtn = document.getElementById("filterActive");
 const filterCompletedBtn = document.getElementById("filterCompleted");
+const viewAllBtn = document.getElementById("viewAll");
+const viewTodayBtn = document.getElementById("viewToday");
+const viewWeekBtn = document.getElementById("viewWeek");
 const snackbar = document.getElementById("snackbar");
 const editModal = document.getElementById("editModal");
 const editModalClose = document.getElementById("editModalClose");
@@ -34,6 +40,7 @@ const editTaskCancel = document.getElementById("editTaskCancel");
 const editModalSubtitle = document.getElementById("editModalSubtitle");
 const editModalPanel = document.querySelector(".edit-modal-panel");
 const installBtn = document.getElementById("installBtn");
+const notificationBtn = document.getElementById("notificationBtn");
 const offlineBanner = document.getElementById("offlineBanner");
 const updateBanner = document.getElementById("updateBanner");
 const refreshAppBtn = document.getElementById("refreshAppBtn");
@@ -43,6 +50,7 @@ const initialTaskState = loadTasks();
 let tasks = initialTaskState.tasks;
 let taskTombstones = initialTaskState.tombstones;
 let currentFilter = "all";
+let currentTimeView = "all";
 let searchQuery = "";
 let lastDeleted = null;
 let undoTimeoutId = null;
@@ -56,6 +64,7 @@ let serviceWorkerRegistration = null;
 let storagePersistenceRequested = false;
 let reloadingForUpdate = false;
 let updateCheckTimer = null;
+let reminderCheckTimer = null;
 let lastMutationTimestamp = 0;
 
 taskForm?.addEventListener("submit", handleAddTask);
@@ -67,6 +76,9 @@ clearCompletedBtn?.addEventListener("click", clearCompletedTasks);
 filterAllBtn?.addEventListener("click", () => setFilter("all"));
 filterActiveBtn?.addEventListener("click", () => setFilter("active"));
 filterCompletedBtn?.addEventListener("click", () => setFilter("completed"));
+viewAllBtn?.addEventListener("click", () => setTimeView("all"));
+viewTodayBtn?.addEventListener("click", () => setTimeView("today"));
+viewWeekBtn?.addEventListener("click", () => setTimeView("week"));
 editModalClose?.addEventListener("click", closeEditModal);
 editTaskCancel?.addEventListener("click", closeEditModal);
 editTaskForm?.addEventListener("submit", submitEditForm);
@@ -75,6 +87,7 @@ editModal?.addEventListener("click", (event) => {
 });
 document.addEventListener("keydown", handleGlobalKeydown);
 installBtn?.addEventListener("click", installApp);
+notificationBtn?.addEventListener("click", enableReminderNotifications);
 refreshAppBtn?.addEventListener("click", applyServiceWorkerUpdate);
 window.addEventListener("online", updateConnectionStatus);
 window.addEventListener("offline", updateConnectionStatus);
@@ -370,6 +383,7 @@ function saveAndRender() {
     showSnackbar("Değişiklik tarayıcıya kaydedilemedi.");
   }
   renderTasks();
+  checkTaskReminders();
 }
 
 function getVisibleTasks() {
@@ -377,17 +391,31 @@ function getVisibleTasks() {
     const matchesFilter = currentFilter === "all"
       || (currentFilter === "active" && !task.completed)
       || (currentFilter === "completed" && task.completed);
+    const matchesTimeView = matchesCurrentTimeView(task);
     const matchesSearch = !searchQuery
       || task.text.toLocaleLowerCase("tr-TR").includes(searchQuery);
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesTimeView && matchesSearch;
   });
+}
+
+function matchesCurrentTimeView(task) {
+  if (currentTimeView === "all") return true;
+  if (!task.date) return false;
+
+  const difference = getDateDifference(task.date);
+  if (difference === null) return false;
+  if (currentTimeView === "today") return difference <= 0;
+
+  const dayOfWeek = (new Date().getDay() + 6) % 7;
+  const daysUntilWeekEnd = 6 - dayOfWeek;
+  return difference >= 0 && difference <= daysUntilWeekEnd;
 }
 
 function renderTasks() {
   if (!taskList) return;
 
   const visibleTasks = getVisibleTasks();
-  const canReorder = currentFilter === "all" && !searchQuery;
+  const canReorder = currentFilter === "all" && currentTimeView === "all" && !searchQuery;
   const taskIndexes = new Map(tasks.map((task, index) => [String(task.id), index]));
   const fragment = document.createDocumentFragment();
 
@@ -418,19 +446,27 @@ function createEmptyState() {
   title.className = "empty-title";
   title.textContent = searchQuery
     ? "Aramana uygun görev bulunamadı"
-    : currentFilter === "completed"
-      ? "Henüz tamamlanan görev yok"
-      : currentFilter === "active"
-        ? "Tüm görevler tamamlandı"
-        : "Planın yeni görevini bekliyor";
+    : currentTimeView === "today"
+      ? "Bugün için görev bulunmuyor"
+      : currentTimeView === "week"
+        ? "Bu hafta için görev bulunmuyor"
+        : currentFilter === "completed"
+          ? "Henüz tamamlanan görev yok"
+          : currentFilter === "active"
+            ? "Tüm görevler tamamlandı"
+            : "Planın yeni görevini bekliyor";
 
   const hint = document.createElement("p");
   hint.className = "empty-hint";
   hint.textContent = searchQuery
     ? "Farklı bir kelime deneyebilir veya aramayı temizleyebilirsin."
-    : currentFilter === "all"
-      ? "Yukarıdaki alandan küçük bir adım ekleyerek başla."
-      : "Diğer görevleri görmek için filtreyi değiştirebilirsin.";
+    : currentTimeView === "today"
+      ? "Gecikmiş ve bugün son tarihli görevler burada görünür."
+      : currentTimeView === "week"
+        ? "Bu hafta son tarihli görevler burada görünür."
+        : currentFilter === "all"
+          ? "Yukarıdaki alandan küçük bir adım ekleyerek başla."
+          : "Diğer görevleri görmek için filtreyi değiştirebilirsin.";
 
   empty.append(mark, title, hint);
   return empty;
@@ -564,6 +600,11 @@ function setFilter(filter) {
   renderTasks();
 }
 
+function setTimeView(view) {
+  currentTimeView = view;
+  renderTasks();
+}
+
 function updateFilterUI() {
   const buttons = {
     all: filterAllBtn,
@@ -573,6 +614,17 @@ function updateFilterUI() {
 
   Object.entries(buttons).forEach(([filter, button]) => {
     const isActive = currentFilter === filter;
+    button?.classList.toggle("active", isActive);
+    button?.setAttribute("aria-pressed", String(isActive));
+  });
+
+  const timeViewButtons = {
+    all: viewAllBtn,
+    today: viewTodayBtn,
+    week: viewWeekBtn,
+  };
+  Object.entries(timeViewButtons).forEach(([view, button]) => {
+    const isActive = currentTimeView === view;
     button?.classList.toggle("active", isActive);
     button?.setAttribute("aria-pressed", String(isActive));
   });
@@ -592,7 +644,7 @@ function updateDashboard(visibleCount) {
   if (progressTrack) progressTrack.setAttribute("aria-valuenow", String(rate));
   if (clearCompletedBtn) clearCompletedBtn.disabled = completed === 0;
   if (resultCount) {
-    resultCount.textContent = searchQuery || currentFilter !== "all"
+    resultCount.textContent = searchQuery || currentFilter !== "all" || currentTimeView !== "all"
       ? `${visibleCount} görev gösteriliyor`
       : "";
   }
@@ -630,14 +682,19 @@ function formatDate(value) {
   }).format(date) : value;
 }
 
-function getDueInfo(value) {
+function getDateDifference(value) {
   const date = parseLocalDate(value);
-  if (!date) return { label: value, className: "" };
+  if (!date) return null;
 
   const today = new Date();
   const dueDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
   const todayDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-  const difference = Math.round((dueDay - todayDay) / 86400000);
+  return Math.round((dueDay - todayDay) / 86400000);
+}
+
+function getDueInfo(value) {
+  const difference = getDateDifference(value);
+  if (difference === null) return { label: value, className: "" };
 
   if (difference < 0) {
     return { label: `${Math.abs(difference)} gün gecikti`, className: "due-past" };
@@ -840,6 +897,159 @@ async function requestPersistentStorage() {
   }
 }
 
+function supportsNotifications() {
+  return "Notification" in window;
+}
+
+function updateNotificationButton() {
+  if (!notificationBtn) return;
+
+  if (!supportsNotifications()) {
+    notificationBtn.hidden = true;
+    return;
+  }
+
+  const permission = Notification.permission;
+  notificationBtn.hidden = false;
+  notificationBtn.disabled = permission === "granted";
+  notificationBtn.textContent = permission === "granted"
+    ? "Hatırlatıcılar Açık"
+    : permission === "denied"
+      ? "Bildirimler Engelli"
+      : "Hatırlatıcıları Aç";
+}
+
+async function enableReminderNotifications() {
+  if (!supportsNotifications()) {
+    showSnackbar("Bu tarayıcı bildirim hatırlatıcılarını desteklemiyor.");
+    return;
+  }
+  if (Notification.permission === "denied") {
+    showSnackbar("Bildirim izni tarayıcı ayarlarından yeniden açılabilir.");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  updateNotificationButton();
+  if (permission !== "granted") {
+    showSnackbar("Hatırlatıcılar etkinleştirilmedi.");
+    return;
+  }
+
+  showSnackbar("Hatırlatıcılar açıldı. Son tarihli görevler kontrol edilecek.");
+  initializeReminders();
+}
+
+function getTodayKey() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
+function getTaskReminderType(task) {
+  const difference = getDateDifference(task.date);
+  if (difference === null || difference > 1) return null;
+  if (difference < 0) return "overdue";
+  if (difference === 0) return "today";
+  return "tomorrow";
+}
+
+function getReminderLog() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(REMINDER_STORAGE_KEY) || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    const expiry = Date.now() - REMINDER_LOG_RETENTION;
+    return Object.entries(parsed).reduce((log, [key, timestamp]) => {
+      if (Number.isFinite(timestamp) && timestamp >= expiry) log[key] = timestamp;
+      return log;
+    }, {});
+  } catch (error) {
+    console.warn("Hatırlatıcı geçmişi okunamadı:", error);
+    return {};
+  }
+}
+
+function saveReminderLog(log) {
+  try {
+    localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(log));
+  } catch (error) {
+    console.warn("Hatırlatıcı geçmişi kaydedilemedi:", error);
+  }
+}
+
+function getReminderMessage(reminders) {
+  if (reminders.length === 1) {
+    const [{ task, type }] = reminders;
+    const prefix = type === "overdue" ? "Geciken görev" : type === "today" ? "Bugünün görevi" : "Yarın için görev";
+    return { title: `${prefix}: ${task.text}`, body: task.date ? formatDate(task.date) : "" };
+  }
+
+  const taskNames = reminders.slice(0, 2).map(({ task }) => task.text).join(" • ");
+  const remaining = reminders.length > 2 ? ` ve ${reminders.length - 2} görev daha` : "";
+  return {
+    title: `${reminders.length} görev için hatırlatma`,
+    body: `${taskNames}${remaining}`,
+  };
+}
+
+async function showReminderNotification(reminders) {
+  const { title, body } = getReminderMessage(reminders);
+  const options = {
+    body,
+    icon: "icon-192.png",
+    badge: "icon-192.png",
+    tag: `gorev-listesi-${getTodayKey()}`,
+    renotify: false,
+    data: { url: "./" },
+  };
+
+  if (serviceWorkerRegistration?.showNotification) {
+    try {
+      await serviceWorkerRegistration.showNotification(title, options);
+      return;
+    } catch (error) {
+      console.warn("Service worker bildirimi gösterilemedi:", error);
+    }
+  }
+
+  new Notification(title, options);
+}
+
+async function checkTaskReminders() {
+  if (!supportsNotifications() || Notification.permission !== "granted") return;
+
+  const reminderLog = getReminderLog();
+  const todayKey = getTodayKey();
+  const reminders = tasks
+    .filter((task) => !task.completed)
+    .map((task) => ({ task, type: getTaskReminderType(task) }))
+    .filter(({ type }) => type)
+    .filter(({ task, type }) => !reminderLog[`${task.id}:${task.date}:${type}:${todayKey}`]);
+
+  if (!reminders.length) return;
+
+  try {
+    await showReminderNotification(reminders);
+    reminders.forEach(({ task, type }) => {
+      reminderLog[`${task.id}:${task.date}:${type}:${todayKey}`] = Date.now();
+    });
+    saveReminderLog(reminderLog);
+  } catch (error) {
+    console.warn("Görev hatırlatıcısı gösterilemedi:", error);
+  }
+}
+
+function initializeReminders() {
+  updateNotificationButton();
+  clearInterval(reminderCheckTimer);
+  if (!supportsNotifications() || Notification.permission !== "granted") return;
+
+  checkTaskReminders();
+  reminderCheckTimer = setInterval(checkTaskReminders, REMINDER_CHECK_INTERVAL);
+}
+
 function handleInstallPrompt(event) {
   event.preventDefault();
   deferredInstallPrompt = event;
@@ -941,14 +1151,20 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("./service-worker.js", { updateViaCache: "none" })
-      .then(watchForServiceWorkerUpdates)
+      .then((registration) => {
+        watchForServiceWorkerUpdates(registration);
+        checkTaskReminders();
+      })
       .catch((error) => {
         console.warn("Service worker kaydı başarısız:", error);
       });
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") checkForAppUpdate();
+    if (document.visibilityState === "visible") {
+      checkForAppUpdate();
+      checkTaskReminders();
+    }
   });
 
   window.addEventListener("online", checkForAppUpdate);
@@ -957,4 +1173,5 @@ if ("serviceWorker" in navigator) {
 renderTasks();
 updateConnectionStatus();
 updateInstallButton();
+initializeReminders();
 showStandaloneLaunchScreen();

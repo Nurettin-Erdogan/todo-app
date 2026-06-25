@@ -14,7 +14,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=13" />
+  <link rel="stylesheet" href="style.css?v=15" />
 </head>
 <body>
   <div id="launchScreen" class="launch-screen" aria-hidden="true" hidden>
@@ -44,7 +44,10 @@
           <p class="subtitle">Görevlerini düzenle, gününü planla.</p>
         </div>
       </div>
-      <button id="installBtn" class="install-btn" type="button" hidden>Uygulamayı Yükle</button>
+      <div class="header-actions">
+        <button id="notificationBtn" class="notification-btn" type="button" hidden>Hatırlatıcıları Aç</button>
+        <button id="installBtn" class="install-btn" type="button" hidden>Uygulamayı Yükle</button>
+      </div>
     </header>
 
     <main class="app">
@@ -126,6 +129,12 @@
             <button class="filter-btn" id="filterCompleted" type="button" aria-pressed="false">Tamamlanan</button>
           </div>
 
+          <div class="filters time-filters" role="group" aria-label="Tarih görünümü">
+            <button class="filter-btn active" id="viewAll" type="button" aria-pressed="true">Tüm Tarihler</button>
+            <button class="filter-btn" id="viewToday" type="button" aria-pressed="false">Bugün</button>
+            <button class="filter-btn" id="viewWeek" type="button" aria-pressed="false">Bu Hafta</button>
+          </div>
+
           <button id="clearCompletedBtn" class="clear-btn" type="button" disabled>Temizle</button>
         </div>
 
@@ -183,6 +192,6 @@
 
   <div id="snackbar" class="snackbar" role="status" aria-live="polite" aria-hidden="true" hidden></div>
 
-  <script src="script.js?v=13"></script>
+  <script src="script.js?v=15"></script>
 </body>
 </html>

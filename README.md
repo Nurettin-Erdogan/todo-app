@@ -30,12 +30,14 @@
 - Son tarih, bugün, yarın ve gecikme göstergeleri
 - Tümü, aktif ve tamamlanan görev filtreleri
 - Anlık görev araması
+- Bugün ve bu hafta için son tarih görünümü
 - Masaüstünde sürükle-bırak ile sıralama
 - Toplam, devam eden ve tamamlanan görev istatistikleri
 - Tamamlanma ilerleme çubuğu
 - Tarayıcıdaki `localStorage` ile kalıcı veri saklama
 - Birden fazla sekme arasında otomatik veri eşitleme
 - PWA kurulumu ve çevrimdışı açılış desteği
+- Uygulama açıkken son tarihi yaklaşan görevler için tarayıcı hatırlatıcıları
 - Yeni sürüm hazır olduğunda güvenli güncelleme bildirimi
 - Klavye ve ekran okuyucu desteği
 

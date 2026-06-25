@@ -1,10 +1,10 @@
 const CACHE_PREFIX = "gorev-listesi-";
-const CACHE_NAME = `${CACHE_PREFIX}v13`;
+const CACHE_NAME = `${CACHE_PREFIX}v15`;
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=13",
-  "./script.js?v=13",
+  "./style.css?v=15",
+  "./script.js?v=15",
   "./manifest.webmanifest",
   "./icon-192.svg",
   "./icon-512.svg",
@@ -31,6 +31,16 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      const openClient = clientList.find((client) => new URL(client.url).origin === self.location.origin);
+      return openClient ? openClient.focus() : self.clients.openWindow("./");
+    }),
+  );
 });
 
 self.addEventListener("fetch", (event) => {
