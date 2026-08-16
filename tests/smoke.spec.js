@@ -16,21 +16,19 @@ test("a task can be added, completed, and deleted", async ({ page }) => {
   await page.locator("#taskInput").fill(taskName);
   await page.locator("#addBtn").click();
 
-  await expect
-    .poll(async () => {
-      return page.evaluate((text) => {
-        const tasks = JSON.parse(localStorage.getItem("gorev-listesi.tasks.v1") || "[]");
-        return tasks.some((task) => task.text === text);
-      }, taskName);
-    })
-    .toBe(true);
+  let task = page.locator("#taskList .task-item", { hasText: taskName });
+  await expect(task).toBeVisible();
 
-  const task = page.locator("#taskList .task-item", { hasText: taskName });
+  await page.reload();
+  task = page.locator("#taskList .task-item", { hasText: taskName });
   await expect(task).toBeVisible();
 
   await task.locator(".task-check").click();
   await expect(task).toHaveClass(/is-completed/);
 
   await task.locator(".delete-btn").click();
+  await expect(page.locator("#taskList .task-item", { hasText: taskName })).toHaveCount(0);
+
+  await page.reload();
   await expect(page.locator("#taskList .task-item", { hasText: taskName })).toHaveCount(0);
 });
