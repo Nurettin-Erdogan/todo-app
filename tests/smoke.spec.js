@@ -87,6 +87,22 @@ test("today view separates current and future tasks", async ({ page }) => {
   await expect(page.locator("#taskList .task-item").filter({ hasText: "Gelecek haftanın görevi" })).toHaveCount(0);
 });
 
+test("the empty state can load an optional example plan", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Örnek planı yükle" })).toBeVisible();
+  await expect(page.locator("#taskList .task-item")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Örnek planı yükle" }).click();
+
+  await expect(page.locator("#taskList .task-item")).toHaveCount(3);
+  await expect(page.locator("#taskList")).toContainText("Portföy sunumunu gözden geçir");
+  await expect(page.locator("#taskList")).toContainText("Canlı demoyu test et");
+  await expect(page.locator("#completionRate")).toHaveText("%33");
+
+  await page.reload();
+  await expect(page.locator("#taskList .task-item")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Örnek planı yükle" })).toHaveCount(0);
+});
+
 test("PWA assets and Vercel security policy are release-ready", async ({ request }) => {
   const manifestResponse = await request.get("/manifest.webmanifest");
   expect(manifestResponse.status()).toBe(200);

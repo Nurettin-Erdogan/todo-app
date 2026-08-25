@@ -469,7 +469,49 @@ function createEmptyState() {
           : "Diğer görevleri görmek için filtreyi değiştirebilirsin.";
 
   empty.append(mark, title, hint);
+
+  const canLoadDemo = !tasks.length
+    && !searchQuery
+    && currentFilter === "all"
+    && currentTimeView === "all";
+  if (canLoadDemo) {
+    const demoButton = document.createElement("button");
+    demoButton.type = "button";
+    demoButton.className = "demo-plan-btn";
+    demoButton.textContent = "Örnek planı yükle";
+    demoButton.addEventListener("click", loadDemoTasks);
+    empty.appendChild(demoButton);
+  }
   return empty;
+}
+
+function toTaskDate(offsetDays) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + offsetDays);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function loadDemoTasks() {
+  if (tasks.length) return;
+
+  const examples = [
+    { text: "Portföy sunumunu gözden geçir", date: toTaskDate(0), priority: "high", completed: true },
+    { text: "Canlı demoyu test et", date: toTaskDate(1), priority: "high", completed: false },
+    { text: "Haftalık hedefleri planla", date: toTaskDate(3), priority: "medium", completed: false },
+  ];
+
+  tasks = examples.map((example, order) => normalizeTask({
+    id: createTaskId(),
+    order,
+    ...example,
+    ...createMutationStamp(),
+  }));
+  saveAndRender();
+  showSnackbar("Örnek plan cihazında oluşturuldu.");
 }
 
 function createTaskElement(task, index, canReorder) {
