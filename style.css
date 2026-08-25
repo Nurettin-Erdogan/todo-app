@@ -722,6 +722,25 @@ select option {
   font-size: 0.88rem;
 }
 
+.demo-plan-btn {
+  min-height: 42px;
+  margin-top: 18px;
+  padding: 0 18px;
+  border: 1px solid rgba(112, 169, 255, 0.42);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(112, 169, 255, 0.26), rgba(112, 169, 255, 0.12));
+  font-weight: 800;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.demo-plan-btn:hover,
+.demo-plan-btn:focus-visible {
+  border-color: rgba(112, 169, 255, 0.82);
+  background: linear-gradient(135deg, rgba(112, 169, 255, 0.38), rgba(112, 169, 255, 0.18));
+  transform: translateY(-1px);
+}
+
 .footer {
   padding-top: 16px;
   color: var(--muted);
