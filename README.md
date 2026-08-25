@@ -1,5 +1,9 @@
 # Görev Listesi
 
+<p align="center">
+  <img src="docs/social-preview.png" alt="Görev Listesi — çevrimdışı, sade ve gizli" width="1100">
+</p>
+
 [![CI durumu](https://github.com/Nurettin-Erdogan/todo-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nurettin-Erdogan/todo-app/actions/workflows/ci.yml)
 [![MIT Lisansı](https://img.shields.io/badge/lisans-MIT-0f766e.svg)](LICENSE)
 
