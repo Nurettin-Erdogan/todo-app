@@ -1,13 +1,13 @@
 # Görev Listesi
 
 <p align="center">
-  <img src="docs/preview.svg" alt="Görev Listesi uygulama önizlemesi" width="760">
+  <img src="docs/screenshots/gorev-listesi.jpg" alt="Görev Listesi uygulamasının canlı masaüstü görünümü" width="760">
 </p>
 
 Öncelik, son tarih, arama ve sürükle-bırak sıralamayı tek bir sakin akışta birleştiren; cihazda çalışan, kurulabilir bir PWA görev yöneticisi.
 
 <p align="center">
-  <a href="https://nurettin-erdogan.github.io/todo-app/"><strong>Canlı demoyu aç →</strong></a>
+  <a href="https://gorev-listesi-pwa.vercel.app/"><strong>Canlı demoyu aç →</strong></a>
   &nbsp;·&nbsp;
   <a href="#testler">Testler</a>
   &nbsp;·&nbsp;
@@ -108,4 +108,10 @@ npx playwright install chromium
 npm test
 ```
 
-Smoke testi uygulamanın açıldığını, görev eklenebildiğini, tamamlanabildiğini ve silinebildiğini doğrular.
+Dört tarayıcı testi; temel görev akışını, düzenleme/arama/filtre/geri alma davranışını, tarih görünümünü ve PWA/Vercel yayın sözleşmesini doğrular.
+
+## Canlı yayın
+
+Ana vitrin dağıtımı [Vercel](https://gorev-listesi-pwa.vercel.app/) üzerindedir. HTTP güvenlik başlıkları, servis çalışanı önbellek politikası ve sosyal paylaşım önizlemesi `vercel.json` ile sürüm kontrolünde tutulur.
+
+[GitHub Pages](https://nurettin-erdogan.github.io/todo-app/) sürümü yedek ayna olarak çalışmaya devam eder.

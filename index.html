@@ -10,11 +10,22 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Görevler" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="tr_TR" />
+  <meta property="og:title" content="Görev Listesi · Gizlilik odaklı görev PWA'sı" />
+  <meta property="og:description" content="Öncelik, tarih, arama, hatırlatıcı ve çevrimdışı çalışma desteğiyle cihazında kalan görev yöneticisi." />
+  <meta property="og:url" content="https://gorev-listesi-pwa.vercel.app/" />
+  <meta property="og:image" content="https://gorev-listesi-pwa.vercel.app/docs/screenshots/gorev-listesi.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Görev Listesi · Gizlilik odaklı görev PWA'sı" />
+  <meta name="twitter:description" content="Görevlerini cihazında planla; çevrimdışıyken de çalışmaya devam et." />
+  <meta name="twitter:image" content="https://gorev-listesi-pwa.vercel.app/docs/screenshots/gorev-listesi.jpg" />
   <title>Görev Listesi</title>
+  <link rel="canonical" href="https://gorev-listesi-pwa.vercel.app/" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon-192.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css?v=15" />
+  <link rel="stylesheet" href="style.css?v=16" />
 </head>
 <body>
   <div id="launchScreen" class="launch-screen" aria-hidden="true" hidden>
@@ -148,7 +159,11 @@
     </main>
 
     <footer class="footer">
-      <small>Verilerin yalnızca bu tarayıcıda saklanır.</small>
+      <small>
+        Verilerin yalnızca bu tarayıcıda saklanır.
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/Nurettin-Erdogan/todo-app" target="_blank" rel="noreferrer">Kaynak kodu</a>
+      </small>
     </footer>
   </div>
 
@@ -192,6 +207,6 @@
 
   <div id="snackbar" class="snackbar" role="status" aria-live="polite" aria-hidden="true" hidden></div>
 
-  <script src="script.js?v=15"></script>
+  <script src="script.js?v=16"></script>
 </body>
 </html>

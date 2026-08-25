@@ -1,10 +1,10 @@
 const CACHE_PREFIX = "gorev-listesi-";
-const CACHE_NAME = `${CACHE_PREFIX}v15`;
+const CACHE_NAME = `${CACHE_PREFIX}v16-showcase`;
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css?v=15",
-  "./script.js?v=15",
+  "./style.css?v=16",
+  "./script.js?v=16",
   "./manifest.webmanifest",
   "./icon-192.svg",
   "./icon-512.svg",
