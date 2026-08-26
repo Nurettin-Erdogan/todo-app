@@ -11,6 +11,8 @@
   <img src="docs/screenshots/gorev-listesi.jpg" alt="Görev Listesi uygulamasının canlı masaüstü görünümü" width="760">
 </p>
 
+> **English summary:** Local-first, installable task-management PWA with offline support, multi-tab synchronization, conflict-safe deletion/undo behavior, accessibility and Playwright browser tests. Built with vanilla JavaScript, Service Workers and browser storage.
+
 ## Portföy özeti
 
 | | |
