@@ -1,6 +1,7 @@
 name: CodeQL güvenlik analizi
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -12,6 +13,10 @@ permissions:
   actions: read
   contents: read
   security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
