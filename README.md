@@ -18,7 +18,7 @@
 | **Problem** | Günlük görevleri farklı ekranlara dağıtmadan, hızlı ve çevrimdışı kullanılabilen sade bir planlama alanında toplamak |
 | **Çözüm** | Verileri yalnızca cihazda saklayan; öncelik, son tarih, filtreleme, hatırlatıcı ve PWA desteği sunan görev yöneticisi |
 | **Zor mühendislik kararları** | Sekmeler arası çakışma çözümü, silinen kayıtlar için tombstone yaklaşımı, güvenli Service Worker güncellemesi ve erişilebilir düzenleme akışı |
-| **Doğrulama** | Beş Playwright tarayıcı senaryosu, GitHub Actions ve güvenlik başlıklarıyla korunan Vercel dağıtımı |
+| **Doğrulama** | Playwright tarayıcı senaryoları, GitHub Actions ve güvenlik başlıklarıyla korunan Vercel dağıtımı |
 
 Bu proje; küçük görünen bir üründe veri bütünlüğü, çevrimdışı davranış, erişilebilirlik ve yayın güvenliğini birlikte ele alabildiğimi gösterir.
 
@@ -127,7 +127,7 @@ npx playwright install chromium
 npm test
 ```
 
-Beş tarayıcı testi; temel görev akışını, düzenleme/arama/filtre/geri alma davranışını, tarih görünümünü, örnek plan akışını ve PWA/Vercel yayın sözleşmesini doğrular.
+Tarayıcı testleri; temel görev akışını, düzenleme/arama/filtre/geri alma davranışını, tarih görünümünü, örnek plan akışını ve PWA/Vercel yayın sözleşmesini doğrular.
 
 ## Canlı yayın
 
