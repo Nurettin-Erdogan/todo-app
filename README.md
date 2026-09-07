@@ -1,7 +1,7 @@
 # Görev Listesi
 
 <p align="center">
-  <img src="docs/social-preview.png" alt="Görev Listesi — çevrimdışı, sade ve gizli" width="1100">
+  <img src="docs/social-preview.jpg" alt="Görev Listesi — çevrimdışı, sade ve gizli" width="1100">
 </p>
 
 [![CI durumu](https://github.com/Nurettin-Erdogan/todo-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Nurettin-Erdogan/todo-app/actions/workflows/ci.yml)
@@ -26,6 +26,8 @@ Bu proje; küçük görünen bir üründe veri bütünlüğü, çevrimdışı da
 
 <p align="center">
   <a href="https://gorev-listesi-pwa.vercel.app/"><strong>Canlı demoyu aç →</strong></a>
+  &nbsp;·&nbsp;
+  <a href="docs/demo-guide.md">60 sn demo</a>
   &nbsp;·&nbsp;
   <a href="#testler">Testler</a>
   &nbsp;·&nbsp;
@@ -90,10 +92,11 @@ Alternatif olarak VS Code içinde:
 
 ## Telefona veya Bilgisayara Kurma
 
-1. Projeyi GitHub Pages gibi HTTPS kullanan bir serviste yayınlayın.
-2. Yayınlanan bağlantıyı telefonda açın.
-3. Android Chrome'da **Uygulamayı yükle**, iPhone Safari'de **Ana Ekrana Ekle** seçeneğini kullanın.
-4. Kurulumdan sonra Görev Listesi bağımsız bir uygulama penceresinde açılır.
+1. Canlı demoyu aç: [gorev-listesi-pwa.vercel.app](https://gorev-listesi-pwa.vercel.app/).
+2. Android Chrome’da **Uygulamayı yükle**, iPhone Safari’de **Paylaş → Ana Ekrana Ekle** seçeneğini kullan.
+3. Kurulumdan sonra Görev Listesi bağımsız bir uygulama penceresinde açılır; veriler yalnızca cihazda kalır.
+
+> Yerel deneme için `uygulamayi-baslat.bat` veya `node server.js` yeterlidir. GitHub Pages yedek ayna olarak durur; ana vitrin Vercel’dir.
 
 ## Dosya Yapısı
 

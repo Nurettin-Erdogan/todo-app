@@ -16,6 +16,7 @@ const PUBLIC_FILES = new Set([
   "icon-192.png",
   "icon-512.png",
   "docs/screenshots/gorev-listesi.jpg",
+  "docs/social-preview.jpg",
 ]);
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
