@@ -499,9 +499,9 @@ function loadDemoTasks() {
   if (tasks.length) return;
 
   const examples = [
-    { text: "Portföy sunumunu gözden geçir", date: toTaskDate(0), priority: "high", completed: true },
-    { text: "Canlı demoyu test et", date: toTaskDate(1), priority: "high", completed: false },
-    { text: "Haftalık hedefleri planla", date: toTaskDate(3), priority: "medium", completed: false },
+    { text: "Servis randevusunu onayla", date: toTaskDate(0), priority: "high", completed: true },
+    { text: "Haftalık raporu gözden geçir", date: toTaskDate(1), priority: "high", completed: false },
+    { text: "Yedeklemeyi kontrol et", date: toTaskDate(3), priority: "medium", completed: false },
   ];
 
   tasks = examples.map((example, order) => normalizeTask({

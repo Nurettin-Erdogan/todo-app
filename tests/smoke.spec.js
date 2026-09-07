@@ -38,16 +38,16 @@ test("a task can be added, completed, and deleted", async ({ page }) => {
 });
 
 test("a task can be edited, searched, filtered, and restored", async ({ page }) => {
-  await page.locator("#taskInput").fill("Portföy açıklamasını güncelle");
+  await page.locator("#taskInput").fill("Haftalık raporu güncelle");
   await page.locator("#taskPriority").selectOption("high");
   await page.locator("#addBtn").click();
 
-  const task = page.locator("#taskList .task-item").filter({ hasText: "Portföy açıklamasını güncelle" });
+  const task = page.locator("#taskList .task-item").filter({ hasText: "Haftalık raporu güncelle" });
   await task.locator(".edit-btn").click();
-  await page.locator("#editTaskText").fill("Portföy README dosyasını güncelle");
+  await page.locator("#editTaskText").fill("Haftalık README notunu güncelle");
   await page.getByRole("button", { name: "Değişiklikleri Kaydet" }).click();
 
-  const editedTask = page.locator("#taskList .task-item").filter({ hasText: "Portföy README dosyasını güncelle" });
+  const editedTask = page.locator("#taskList .task-item").filter({ hasText: "Haftalık README notunu güncelle" });
   await expect(editedTask).toBeVisible();
   await page.locator("#searchInput").fill("README");
   await expect(editedTask).toBeVisible();
@@ -61,7 +61,7 @@ test("a task can be edited, searched, filtered, and restored", async ({ page }) 
 
   await editedTask.locator(".delete-btn").click();
   await page.getByRole("button", { name: "Geri Al" }).click();
-  await expect(page.locator("#taskList .task-item").filter({ hasText: "Portföy README dosyasını güncelle" })).toBeVisible();
+  await expect(page.locator("#taskList .task-item").filter({ hasText: "Haftalık README notunu güncelle" })).toBeVisible();
 });
 
 test("today view separates current and future tasks", async ({ page }) => {
@@ -94,8 +94,8 @@ test("the empty state can load an optional example plan", async ({ page }) => {
   await page.getByRole("button", { name: "Örnek planı yükle" }).click();
 
   await expect(page.locator("#taskList .task-item")).toHaveCount(3);
-  await expect(page.locator("#taskList")).toContainText("Portföy sunumunu gözden geçir");
-  await expect(page.locator("#taskList")).toContainText("Canlı demoyu test et");
+  await expect(page.locator("#taskList")).toContainText("Servis randevusunu onayla");
+  await expect(page.locator("#taskList")).toContainText("Haftalık raporu gözden geçir");
   await expect(page.locator("#completionRate")).toHaveText("%33");
 
   await page.reload();

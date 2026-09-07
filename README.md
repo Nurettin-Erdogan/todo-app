@@ -11,13 +11,13 @@
   <img src="docs/screenshots/gorev-listesi.jpg" alt="Görev Listesi uygulamasının canlı masaüstü görünümü" width="760">
 </p>
 
-## Portföy özeti
+## Özet
 
 | | |
 |---|---|
 | **Problem** | Günlük görevleri farklı ekranlara dağıtmadan, hızlı ve çevrimdışı kullanılabilen sade bir planlama alanında toplamak |
 | **Çözüm** | Verileri yalnızca cihazda saklayan; öncelik, son tarih, filtreleme, hatırlatıcı ve PWA desteği sunan görev yöneticisi |
-| **Zor mühendislik kararları** | Sekmeler arası çakışma çözümü, silinen kayıtlar için tombstone yaklaşımı, güvenli Service Worker güncellemesi ve erişilebilir düzenleme akışı |
+| **Kararlar** | Sekmeler arası çakışma çözümü, silinen kayıtlar için tombstone yaklaşımı, güvenli Service Worker güncellemesi ve erişilebilir düzenleme akışı |
 | **Doğrulama** | Playwright tarayıcı senaryoları, GitHub Actions ve güvenlik başlıklarıyla korunan Vercel dağıtımı |
 
 Görev Listesi, küçük bir PWA’da veri bütünlüğü, çevrimdışı kabuk ve yayın güvenliğini aynı üründe tutar.
@@ -27,7 +27,7 @@ Görev Listesi, küçük bir PWA’da veri bütünlüğü, çevrimdışı kabuk 
 <p align="center">
   <a href="https://gorev-listesi-pwa.vercel.app/"><strong>Canlı demoyu aç →</strong></a>
   &nbsp;·&nbsp;
-  <a href="docs/demo-guide.md">3 dk demo</a>
+  <a href="docs/demo-guide.md">Canlı tur</a>
   &nbsp;·&nbsp;
   <a href="#testler">Testler</a>
   &nbsp;·&nbsp;
