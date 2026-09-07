@@ -20,14 +20,14 @@
 | **Zor mühendislik kararları** | Sekmeler arası çakışma çözümü, silinen kayıtlar için tombstone yaklaşımı, güvenli Service Worker güncellemesi ve erişilebilir düzenleme akışı |
 | **Doğrulama** | Playwright tarayıcı senaryoları, GitHub Actions ve güvenlik başlıklarıyla korunan Vercel dağıtımı |
 
-Bu proje; küçük görünen bir üründe veri bütünlüğü, çevrimdışı davranış, erişilebilirlik ve yayın güvenliğini birlikte ele alabildiğimi gösterir.
+Görev Listesi, küçük bir PWA’da veri bütünlüğü, çevrimdışı kabuk ve yayın güvenliğini aynı üründe tutar.
 
 Öncelik, son tarih, arama ve sürükle-bırak sıralamayı tek bir sakin akışta birleştiren; cihazda çalışan, kurulabilir bir PWA görev yöneticisi.
 
 <p align="center">
   <a href="https://gorev-listesi-pwa.vercel.app/"><strong>Canlı demoyu aç →</strong></a>
   &nbsp;·&nbsp;
-  <a href="docs/demo-guide.md">60 sn demo</a>
+  <a href="docs/demo-guide.md">3 dk demo</a>
   &nbsp;·&nbsp;
   <a href="#testler">Testler</a>
   &nbsp;·&nbsp;
