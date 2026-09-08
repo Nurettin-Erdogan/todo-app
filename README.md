@@ -11,6 +11,16 @@
   <img src="docs/screenshots/gorev-listesi.jpg" alt="Görev Listesi uygulamasının canlı masaüstü görünümü" width="760">
 </p>
 
+## Bir dakikada dene
+
+1. [Uygulamayı aç](https://gorev-listesi-pwa.vercel.app/) ve kendi görevini ekle.
+2. Öncelik ve son tarih belirle; görevi tamamla veya silip **Geri Al** ile kurtar.
+3. Aynı tarayıcıda ikinci bir sekme açıp değişikliklerin eşitlenmesini dene.
+
+**Teknik odak:** Sadece görev eklemek değil, birden fazla sekmede değişen veya silinen kayıtların tutarlılığını korumak. Silinen kayıtların eski sekmelerden geri gelmesini önlemek için silme işaretleri tutulur. [Veri birleştirme ve arayüz](script.js) · [Çevrimdışı kabuk](service-worker.js)
+
+**Sınırlar:** Cihazlar arasında bulut eşitlemesi yoktur. Tarayıcı verileri temizlenirse görevler kaybolur. Hatırlatıcılar uygulama açıkken çalışır; uygulama kapalıyken bildirim garantisi yoktur.
+
 ## Özet
 
 | | |
